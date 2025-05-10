@@ -10,17 +10,17 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  @ApiOperation({ summary: 'Iniciar sesión de usuario' })
-  @ApiResponse({ status: 201, description: 'Login exitoso, retorna access_token y datos del usuario.' })
-  @ApiResponse({ status: 401, description: 'Credenciales incorrectas.' })
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({ status: 201, description: 'Login successful, returns access_token and user data.' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
 
   @Post('register')
-  @ApiOperation({ summary: 'Registrar un nuevo usuario' })
-  @ApiResponse({ status: 201, description: 'Usuario registrado correctamente.' })
-  @ApiResponse({ status: 409, description: 'El usuario ya existe.' })
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User registered successfully.' })
+  @ApiResponse({ status: 409, description: 'User already exists.' })
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }

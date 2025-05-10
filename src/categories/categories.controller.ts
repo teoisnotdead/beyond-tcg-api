@@ -11,36 +11,36 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva categoría' })
-  @ApiResponse({ status: 201, description: 'Categoría creada exitosamente' })
+  @ApiOperation({ summary: 'Create a new category' })
+  @ApiResponse({ status: 201, description: 'Category created successfully' })
   create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoriesService.create(createCategoryDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las categorías' })
-  @ApiResponse({ status: 200, description: 'Lista de categorías obtenida exitosamente' })
+  @ApiOperation({ summary: 'Get all categories' })
+  @ApiResponse({ status: 200, description: 'Categories list retrieved successfully' })
   findAll() {
     return this.categoriesService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener una categoría por ID' })
-  @ApiResponse({ status: 200, description: 'Categoría encontrada exitosamente' })
+  @ApiOperation({ summary: 'Get category by ID' })
+  @ApiResponse({ status: 200, description: 'Category found successfully' })
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar una categoría' })
-  @ApiResponse({ status: 200, description: 'Categoría actualizada exitosamente' })
+  @ApiOperation({ summary: 'Update category' })
+  @ApiResponse({ status: 200, description: 'Category updated successfully' })
   update(@Param('id') id: string, @Body() updateCategoryDto: CreateCategoryDto) {
     return this.categoriesService.update(id, updateCategoryDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar una categoría' })
-  @ApiResponse({ status: 200, description: 'Categoría eliminada exitosamente' })
+  @ApiOperation({ summary: 'Delete category' })
+  @ApiResponse({ status: 200, description: 'Category deleted successfully' })
   remove(@Param('id') id: string) {
     return this.categoriesService.remove(id);
   }

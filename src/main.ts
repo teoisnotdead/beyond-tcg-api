@@ -12,7 +12,7 @@ async function bootstrap() {
   // Swagger config
   const config = new DocumentBuilder()
     .setTitle('Beyond TCG API')
-    .setDescription('API para el marketplace de cartas coleccionables')
+    .setDescription('API for the collectible card marketplace')
     .setVersion('1.0')
     .addBearerAuth()
     .addServer('/api')
@@ -20,14 +20,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Habilitamos CORS
+  // Enable CORS
   app.enableCors({
     origin: configService.get<string>('FRONTEND_URL'),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Habilitamos validación global
+  // Enable global validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -36,12 +36,12 @@ async function bootstrap() {
     }),
   );
 
-  // Prefijo global para API
+  // Global API prefix
   app.setGlobalPrefix('api');
 
   const port = configService.get<number>('PORT') || 3000;
   await app.listen(port);
-  console.log(`Aplicación ejecutándose en puerto ${port}`);
-  console.log(`Swagger docs disponibles en http://localhost:${port}/api/docs`);
+  console.log(`Application running on port ${port}`);
+  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 bootstrap();

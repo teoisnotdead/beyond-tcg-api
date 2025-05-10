@@ -2,15 +2,15 @@ import { IsString, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateLanguageDto {
-  @ApiProperty({ description: 'Código del idioma (ej: es, en, fr)' })
+  @ApiProperty({ description: 'Language code (e.g., en, es, fr)' })
   @IsString()
   code: string;
 
-  @ApiProperty({ description: 'Nombre del idioma' })
+  @ApiProperty({ description: 'Language name' })
   @IsString()
   name: string;
 
-  @ApiProperty({ description: 'Estado del idioma', default: true })
+  @ApiProperty({ description: 'Language status', default: true })
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;

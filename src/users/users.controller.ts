@@ -17,8 +17,8 @@ export class UsersController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Crear un nuevo usuario (solo admin)' })
-  @ApiResponse({ status: 201, description: 'Usuario creado correctamente.' })
+  @ApiOperation({ summary: 'Create a new user (admin only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully.' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
@@ -26,28 +26,28 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Obtener todos los usuarios (solo admin)' })
+  @ApiOperation({ summary: 'Get all users (admin only)' })
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Obtener el perfil del usuario autenticado' })
+  @ApiOperation({ summary: 'Get authenticated user profile' })
   getProfile(@Request() req) {
     return this.usersService.findOne(req.user.id);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Obtener un usuario por ID' })
+  @ApiOperation({ summary: 'Get user by ID' })
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Actualizar un usuario' })
+  @ApiOperation({ summary: 'Update user' })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
@@ -55,7 +55,7 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Eliminar un usuario (solo admin)' })
+  @ApiOperation({ summary: 'Delete user (admin only)' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }

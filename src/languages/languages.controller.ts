@@ -11,36 +11,36 @@ export class LanguagesController {
   constructor(private readonly languagesService: LanguagesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear un nuevo idioma' })
-  @ApiResponse({ status: 201, description: 'Idioma creado exitosamente' })
+  @ApiOperation({ summary: 'Create a new language' })
+  @ApiResponse({ status: 201, description: 'Language created successfully' })
   create(@Body() createLanguageDto: CreateLanguageDto) {
     return this.languagesService.create(createLanguageDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los idiomas' })
-  @ApiResponse({ status: 200, description: 'Lista de idiomas obtenida exitosamente' })
+  @ApiOperation({ summary: 'Get all languages' })
+  @ApiResponse({ status: 200, description: 'Languages list retrieved successfully' })
   findAll() {
     return this.languagesService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener un idioma por ID' })
-  @ApiResponse({ status: 200, description: 'Idioma encontrado exitosamente' })
+  @ApiOperation({ summary: 'Get language by ID' })
+  @ApiResponse({ status: 200, description: 'Language found successfully' })
   findOne(@Param('id') id: string) {
     return this.languagesService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar un idioma' })
-  @ApiResponse({ status: 200, description: 'Idioma actualizado exitosamente' })
+  @ApiOperation({ summary: 'Update language' })
+  @ApiResponse({ status: 200, description: 'Language updated successfully' })
   update(@Param('id') id: string, @Body() updateLanguageDto: CreateLanguageDto) {
     return this.languagesService.update(id, updateLanguageDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un idioma' })
-  @ApiResponse({ status: 200, description: 'Idioma eliminado exitosamente' })
+  @ApiOperation({ summary: 'Delete language' })
+  @ApiResponse({ status: 200, description: 'Language deleted successfully' })
   remove(@Param('id') id: string) {
     return this.languagesService.remove(id);
   }

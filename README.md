@@ -45,34 +45,9 @@ cd beyond-tcg-api
 npm install
 ```
 
-3. Create a `.env` file in the root directory with the following variables:
-```env
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=your_password
-DB_NAME=beyond_game_tcg
+3. Create a `.env` file in the root directory with the following file:
+[.env.example](.env.example)
 
-# JWT
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRATION=1d
-REFRESH_TOKEN_SECRET=your_refresh_secret
-REFRESH_TOKEN_EXPIRATION=7d
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-# Frontend
-FRONTEND_URL=http://localhost:4200
-```
 
 4. Run the application:
 ```bash

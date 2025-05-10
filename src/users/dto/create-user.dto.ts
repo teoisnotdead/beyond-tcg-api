@@ -27,4 +27,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   avatar_url?: string;
+
+  @ApiPropertyOptional({ description: 'Google ID for social login' })
+  @IsOptional()
+  @IsString()
+  google_id?: string;
 }

@@ -57,4 +57,31 @@ export class AuthService {
       },
     };
   }
+
+  async googleLogin(googleUser: any) {
+    let user = await this.usersService.findByEmail(googleUser.email).catch(() => null);
+
+    if (!user) {
+      user = await this.usersService.create({
+        name: googleUser.name,
+        email: googleUser.email,
+        avatar_url: googleUser.avatar_url,
+        google_id: googleUser.google_id,
+      });
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    const access_token = this.jwtService.sign(payload);
+
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar_url: user.avatar_url,
+      },
+    };
+  }
 }

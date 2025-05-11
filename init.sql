@@ -209,7 +209,8 @@ SET name = EXCLUDED.name,
     updated_at = now();
 
 
-INSERT INTO subscriptionplans (id, name, price, duration_days, description, features, is_active, created_at, updated_at)
+INSERT INTO SubscriptionPlans (id, name, price, duration_days, description, features, is_active, created_at, updated_at)
 VALUES
-  (gen_random_uuid(), 'Free', 0.00, 3650, 'Default free plan', '{"maxSales": 5, "support": "community"}', true, now(), now()),
-  (gen_random_uuid(), 'Premium', 9.99, 30, 'Premium plan with more features', '{"maxSales": 100, "support": "priority"}', true, now(), now());
+  (gen_random_uuid(), 'Free', 0.00, 3650, 'Plan gratuito por defecto', '{"maxSales": 10, "canCreateStore": false, "branding": false, "statistics": false, "featured": false, "support": "community"}', true, now(), now()),
+  (gen_random_uuid(), 'Pro', 4.99, 30, 'Plan Pro para usuarios avanzados', '{"maxSales": 50, "canCreateStore": false, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now()),
+  (gen_random_uuid(), 'Tienda', 9.99, 30, 'Plan para tiendas profesionales', '{"maxSales": 1000, "canCreateStore": true, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now());

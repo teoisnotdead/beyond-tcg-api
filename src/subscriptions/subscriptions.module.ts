@@ -5,6 +5,7 @@ import { SubscriptionsController } from './subscriptions.controller';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
 import { UsersModule } from '../users/users.module';
+import { SubscriptionValidationService } from './subscription-validation.service';
 
 @Module({
   imports: [
@@ -12,7 +13,13 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   controllers: [SubscriptionsController],
-  providers: [SubscriptionsService],
-  exports: [SubscriptionsService],
+  providers: [
+    SubscriptionsService,
+    SubscriptionValidationService,
+  ],
+  exports: [
+    SubscriptionsService,
+    SubscriptionValidationService,
+  ],
 })
 export class SubscriptionsModule {} 

@@ -99,8 +99,27 @@ export class CloudinaryController {
     if (!file.mimetype.startsWith('image/')) {
       return { message: 'Only image files are allowed' };
     }
+
+    // 1. Get the current user
+    const user = await this.usersService.findOne(req.user.id);
+
+    // 2. If the user has an avatar and it's not the default avatar, delete the previous image
+    const DEFAULT_AVATAR_URL = 'https://res.cloudinary.com/teoisnotdead/image/upload/v1746931076/Beyond%20TCG/avatars/default_avatar.png';
+    if (user.avatar_url && user.avatar_url !== DEFAULT_AVATAR_URL) {
+      // Extract the public_id from the previous URL
+      // Example of URL: https://res.cloudinary.com/<your_cloud_name>/image/upload/v1234567890/Beyond%20TCG/avatars/abc123xyz.png
+      const urlParts = user.avatar_url.split('/');
+      // Get the folder and the file name with extension
+      const folderIndex = urlParts.findIndex(part => part === 'upload') + 1;
+      const publicIdWithExt = urlParts.slice(folderIndex).join('/'); // Beyond TCG/avatars/abc123xyz.png
+      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ''); // Remove the extension
+      await this.cloudinaryService.deleteImage(publicId);
+    }
+
+    // 3. Upload the new image
     const result: any = await this.cloudinaryService.uploadImage(file, 'Beyond TCG/avatars');
     await this.usersService.update(req.user.id, { avatar_url: result.secure_url });
+
     return {
       message: 'Avatar updated successfully',
       avatar_url: result.secure_url,

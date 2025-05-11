@@ -35,6 +35,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         avatar_url: user.avatar_url,
+        current_subscription_id: user.current_subscription_id,
       },
     };
   }
@@ -54,6 +55,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         avatar_url: user.avatar_url,
+        current_subscription_id: user.current_subscription_id,
       },
     };
   }

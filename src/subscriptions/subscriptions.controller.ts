@@ -3,6 +3,9 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../common/enums/roles.enum';
+import { User } from '../users/entities/user.entity';
 
 @ApiTags('subscriptions')
 @ApiBearerAuth()
@@ -19,6 +22,7 @@ export class SubscriptionsController {
     return this.subscriptionsService.getAllPlans();
   }
 
+  @Roles(Role.ADMIN, Role.MOD)
   @Get('plans/:id')
   @ApiOperation({ summary: 'Get subscription plan by ID' })
   @ApiResponse({ status: 200, description: 'Subscription plan found successfully' })
@@ -33,7 +37,7 @@ export class SubscriptionsController {
   @ApiResponse({ status: 200, description: 'Current subscription retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'No active subscription found' })
-  getCurrentSubscription(@Request() req) {
+  getCurrentSubscription(@Request() req: { user: User }) {
     return this.subscriptionsService.getCurrentSubscription(req.user.id);
   }
 

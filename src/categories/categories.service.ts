@@ -23,7 +23,7 @@ export class CategoriesService {
   async findOne(id: string): Promise<Category> {
     const category = await this.categoriesRepository.findOne({ where: { id } });
     if (!category) {
-      throw new NotFoundException(`Categoría con ID ${id} no encontrada`);
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
     return category;
   }
@@ -37,7 +37,7 @@ export class CategoriesService {
   async remove(id: string): Promise<void> {
     const result = await this.categoriesRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`Categoría con ID ${id} no encontrada`);
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
   }
 } 

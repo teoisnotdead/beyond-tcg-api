@@ -22,7 +22,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.usersRepository.findOne({ where: { email: createUserDto.email } });
     if (existingUser) {
-      throw new ConflictException('El usuario con este email ya existe');
+      throw new ConflictException('User with this email already exists');
     }
     const user = this.usersRepository.create(createUserDto);
     if (createUserDto.password) {
@@ -60,7 +60,7 @@ export class UsersService {
   async findOne(id: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
     return user;
   }
@@ -68,7 +68,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
-      throw new NotFoundException(`Usuario con email ${email} no encontrado`);
+      throw new NotFoundException(`User with email ${email} not found`);
     }
     return user;
   }
@@ -86,7 +86,7 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     const result = await this.usersRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
   }
 }

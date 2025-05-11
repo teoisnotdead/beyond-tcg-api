@@ -23,7 +23,7 @@ export class LanguagesService {
   async findOne(id: string): Promise<Language> {
     const language = await this.languagesRepository.findOne({ where: { id } });
     if (!language) {
-      throw new NotFoundException(`Idioma con ID ${id} no encontrado`);
+      throw new NotFoundException(`Language with ID ${id} not found`);
     }
     return language;
   }
@@ -37,7 +37,7 @@ export class LanguagesService {
   async remove(id: string): Promise<void> {
     const result = await this.languagesRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`Idioma con ID ${id} no encontrado`);
+      throw new NotFoundException(`Language with ID ${id} not found`);
     }
   }
 } 

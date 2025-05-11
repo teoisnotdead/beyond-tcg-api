@@ -11,6 +11,7 @@ import { Language } from './languages/entities/language.entity';
 import { EnvConfig } from './config/env.config';
 import { SubscriptionPlan } from './subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from './subscriptions/entities/user-subscription.entity';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { UserSubscription } from './subscriptions/entities/user-subscription.ent
     LanguagesModule,
     SubscriptionPlan,
     UserSubscription,
+    SubscriptionsModule,
   ],
 })
 export class AppModule {}

@@ -27,6 +27,7 @@ export const EnvConfig = () => ({
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    defaultAvatarUrl: process.env.DEFAULT_AVATAR_URL || 'https://res.cloudinary.com/teoisnotdead/image/upload/v1746931076/Beyond%20TCG/avatars/default_avatar.png',
   },
 
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:4200',

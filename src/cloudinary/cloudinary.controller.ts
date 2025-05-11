@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Delete, Query } from '@nestjs/common';
 import { ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
+import { EnvConfig } from 'src/config/env.config';
 
 @ApiTags('cloudinary')
 @ApiBearerAuth()
@@ -104,8 +105,7 @@ export class CloudinaryController {
     const user = await this.usersService.findOne(req.user.id);
 
     // 2. If the user has an avatar and it's not the default avatar, delete the previous image
-    const DEFAULT_AVATAR_URL = 'https://res.cloudinary.com/teoisnotdead/image/upload/v1746931076/Beyond%20TCG/avatars/default_avatar.png';
-    if (user.avatar_url && user.avatar_url !== DEFAULT_AVATAR_URL) {
+    if (user.avatar_url && user.avatar_url !== EnvConfig().cloudinary.defaultAvatarUrl) {
       // Extract the public_id from the previous URL
       // Example of URL: https://res.cloudinary.com/<your_cloud_name>/image/upload/v1234567890/Beyond%20TCG/avatars/abc123xyz.png
       const urlParts = user.avatar_url.split('/');

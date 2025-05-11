@@ -7,8 +7,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { SubscriptionPlan } from 'src/subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from 'src/subscriptions/entities/user-subscription.entity';
-
-const DEFAULT_AVATAR_URL = 'https://res.cloudinary.com/teoisnotdead/image/upload/v1746931076/Beyond%20TCG/avatars/default_avatar.png';
+import { EnvConfig } from 'src/config/env.config';
 
 @Injectable()
 export class UsersService {
@@ -30,7 +29,7 @@ export class UsersService {
 
     // Assign default avatar if not provided (for email/password registration)
     if (!user.avatar_url) {
-      user.avatar_url = DEFAULT_AVATAR_URL;
+      user.avatar_url = EnvConfig().cloudinary.defaultAvatarUrl;
     }
 
     if (createUserDto.password) {

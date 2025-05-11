@@ -9,6 +9,8 @@ import { User } from './users/entities/user.entity';
 import { Category } from './categories/entities/category.entity';
 import { Language } from './languages/entities/language.entity';
 import { EnvConfig } from './config/env.config';
+import { SubscriptionPlan } from './subscriptions/entities/subscription-plan.entity';
+import { UserSubscription } from './subscriptions/entities/user-subscription.entity';
 
 @Module({
   imports: [
@@ -25,7 +27,13 @@ import { EnvConfig } from './config/env.config';
         username: configService.get('database.username'),
         password: configService.get('database.password'),
         database: configService.get('database.name'),
-        entities: [User, Category, Language],
+        entities: [
+          User,
+          Category,
+          Language,
+          SubscriptionPlan,
+          UserSubscription,
+        ],
         synchronize: configService.get('environment') !== 'production',
       }),
       inject: [ConfigService],
@@ -34,6 +42,8 @@ import { EnvConfig } from './config/env.config';
     AuthModule,
     CategoriesModule,
     LanguagesModule,
+    SubscriptionPlan,
+    UserSubscription,
   ],
 })
 export class AppModule {}

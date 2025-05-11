@@ -1,4 +1,4 @@
--- Active: 1746670186923@@127.0.0.1@5432@beyond_game_tcg
+-- Active: 1746909768111@@127.0.0.1@5432@beyond_game_tcg
 
 
 CREATE DATABASE beyond_game_tcg;
@@ -207,3 +207,9 @@ ON CONFLICT (slug) DO UPDATE
 SET name = EXCLUDED.name,
     display_order = EXCLUDED.display_order,
     updated_at = now();
+
+
+INSERT INTO subscriptionplans (id, name, price, duration_days, description, features, is_active, created_at, updated_at)
+VALUES
+  (gen_random_uuid(), 'Free', 0.00, 3650, 'Default free plan', '{"maxSales": 5, "support": "community"}', true, now(), now()),
+  (gen_random_uuid(), 'Premium', 9.99, 30, 'Premium plan with more features', '{"maxSales": 100, "support": "priority"}', true, now(), now());

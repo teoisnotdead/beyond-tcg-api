@@ -8,6 +8,8 @@ import * as bcrypt from 'bcrypt';
 import { SubscriptionPlan } from 'src/subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from 'src/subscriptions/entities/user-subscription.entity';
 
+const DEFAULT_AVATAR_URL = 'https://res.cloudinary.com/teoisnotdead/image/upload/v1746931076/Beyond%20TCG/avatars/default_avatar.png';
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -25,6 +27,12 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
     const user = this.usersRepository.create(createUserDto);
+
+    // Assign default avatar if not provided (for email/password registration)
+    if (!user.avatar_url) {
+      user.avatar_url = DEFAULT_AVATAR_URL;
+    }
+
     if (createUserDto.password) {
       const salt = await bcrypt.genSalt();
       user.password = await bcrypt.hash(createUserDto.password, salt);

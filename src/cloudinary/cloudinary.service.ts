@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { v2 } from 'cloudinary';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CloudinaryService {
-  constructor(private configService: ConfigService) {}
-
   async uploadImage(file: Express.Multer.File, folder: string = 'general') {
     return new Promise((resolve, reject) => {
       const upload = v2.uploader.upload_stream(

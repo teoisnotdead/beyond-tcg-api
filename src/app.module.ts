@@ -12,6 +12,7 @@ import { EnvConfig } from './config/env.config';
 import { SubscriptionPlan } from './subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from './subscriptions/entities/user-subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     SubscriptionPlan,
     UserSubscription,
     SubscriptionsModule,
+    CloudinaryModule,
   ],
 })
 export class AppModule {}

@@ -44,8 +44,6 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     AuthModule,
     CategoriesModule,
     LanguagesModule,
-    SubscriptionPlan,
-    UserSubscription,
     SubscriptionsModule,
     CloudinaryModule,
   ],

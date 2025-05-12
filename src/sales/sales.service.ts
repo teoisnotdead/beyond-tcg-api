@@ -3,12 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sale } from './entities/sale.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { PurchasesService } from '../purchases/purchases.service';
 
 @Injectable()
 export class SalesService {
   constructor(
     @InjectRepository(Sale)
     private salesRepository: Repository<Sale>,
+    private readonly purchasesService: PurchasesService,
   ) {}
 
   async countActiveSalesByUser(userId: string): Promise<number> {
@@ -78,16 +80,23 @@ export class SalesService {
   }
 
   async confirmDelivery(saleId: string, buyerId: string, deliveryProofUrl: string) {
-    const sale = await this.salesRepository.findOne({ where: { id: saleId } });
+    const sale = await this.salesRepository.findOne({ where: { id: saleId }, relations: ['seller', 'category', 'language'] });
     if (!sale) throw new NotFoundException('Sale not found');
     // Optionally, validate that buyerId is the one who reserved the sale
     if (sale.status !== 'shipped') throw new BadRequestException('Sale is not shipped');
-    sale.status = 'delivered';
+    sale.status = 'completed';
     sale.delivery_proof_url = deliveryProofUrl;
-    sale.delivered_at = new Date();
+    sale.completed_at = new Date();
     await this.salesRepository.save(sale);
+
+    // Create the purchase record
+    await this.purchasesService.create(buyerId, {
+      sale_id: sale.id,
+      quantity: sale.quantity, // or the correct quantity
+    });
+
     // Notification logic here
-    return { message: 'Sale marked as delivered' };
+    return { message: 'Sale completed and purchase registered.' };
   }
 
   async cancelSale(saleId: string, userId: string) {

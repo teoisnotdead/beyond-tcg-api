@@ -4,11 +4,13 @@ import { Sale } from './entities/sale.entity';
 import { SalesService } from './sales.service';
 import { SalesController } from './sales.controller';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { PurchasesModule } from '../purchases/purchases.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sale]),
     forwardRef(() => SubscriptionsModule),
+    forwardRef(() => PurchasesModule),
   ],
   providers: [SalesService],
   controllers: [SalesController],

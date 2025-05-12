@@ -111,6 +111,13 @@ CREATE TABLE Sales (
     views INTEGER DEFAULT 0,
     category_id UUID REFERENCES Categories(id) NOT NULL,
     language_id UUID REFERENCES Languages(id) NOT NULL,
+    shipping_proof_url VARCHAR(255),
+    delivery_proof_url VARCHAR(255),
+    reserved_at TIMESTAMP,
+    shipped_at TIMESTAMP,
+    delivered_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    cancelled_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT now()
 );
 

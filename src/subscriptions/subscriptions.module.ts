@@ -6,11 +6,13 @@ import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
 import { UsersModule } from '../users/users.module';
 import { SubscriptionValidationService } from './subscription-validation.service';
+import { SalesModule } from '../sales/sales.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription]),
     UsersModule,
+    SalesModule,
   ],
   controllers: [SubscriptionsController],
   providers: [

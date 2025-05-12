@@ -2,7 +2,7 @@
 
 
 CREATE DATABASE beyond_game_tcg;
-DROP TABLE IF EXISTS UserSubscriptions, SubscriptionPlans, Notifications, StoreSocialLinks, StoreRatings, Stores, Favorites, Purchases, Comments, Sales, Categories, Languages, Users;
+DROP TABLE IF EXISTS UserSubscriptions, SubscriptionPlans, Notifications, StoreSocialLinks, StoreRatings, UserRatings, Stores, Favorites, Purchases, Comments, Sales, Categories, Languages, Users;
 
 CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -72,6 +72,15 @@ CREATE TABLE StoreRatings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id UUID REFERENCES Stores(id) ON DELETE CASCADE,
     user_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT now()
+);
+
+CREATE TABLE UserRatings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES Users(id) ON DELETE CASCADE, -- Usuario que recibe el rating
+    rater_id UUID REFERENCES Users(id) ON DELETE SET NULL, -- Usuario que da el rating
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT now()

@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Role } from '../../common/enums/roles.enum';
+import { UserRating } from '../../ratings/entities/user-rating.entity';
 
 @Entity('users')
 export class User {
@@ -45,4 +46,10 @@ export class User {
 
   @Column({ nullable: true, type: 'timestamp' })
   refresh_token_expires_at?: Date;
+
+  @OneToMany(() => UserRating, (rating) => rating.user)
+  ratingsReceived: UserRating[];
+
+  @OneToMany(() => UserRating, (rating) => rating.rater)
+  ratingsGiven: UserRating[];
 }

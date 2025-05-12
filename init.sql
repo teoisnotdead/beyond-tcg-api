@@ -71,19 +71,23 @@ CREATE TABLE StoreSocialLinks (
 CREATE TABLE StoreRatings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id UUID REFERENCES Stores(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    rater_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    sale_id UUID REFERENCES Sales(id) ON DELETE CASCADE, -- Venta asociada
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
-    created_at TIMESTAMP DEFAULT now()
+    created_at TIMESTAMP DEFAULT now(),
+    UNIQUE (sale_id, rater_id)
 );
 
 CREATE TABLE UserRatings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES Users(id) ON DELETE CASCADE, -- Usuario que recibe el rating
     rater_id UUID REFERENCES Users(id) ON DELETE SET NULL, -- Usuario que da el rating
+    sale_id UUID REFERENCES Sales(id) ON DELETE CASCADE, -- Venta asociada
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
-    created_at TIMESTAMP DEFAULT now()
+    created_at TIMESTAMP DEFAULT now(),
+    UNIQUE (sale_id, rater_id) -- Un rating por venta y usuario calificador
 );
 
 CREATE TABLE Categories (

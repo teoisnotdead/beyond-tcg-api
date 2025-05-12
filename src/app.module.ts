@@ -13,6 +13,11 @@ import { SubscriptionPlan } from './subscriptions/entities/subscription-plan.ent
 import { UserSubscription } from './subscriptions/entities/user-subscription.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { StoreRating } from './ratings/entities/store-rating.entity';
+import { UserRating } from './ratings/entities/user-rating.entity';
+import { Sale } from './sales/entities/sale.entity';
+import { Store } from './stores/entities/store.entity';
+import { StoreSocialLink } from './stores/entities/store-social-link.entity';
 
 @Module({
   imports: [
@@ -35,6 +40,11 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
           Language,
           SubscriptionPlan,
           UserSubscription,
+          UserRating,
+          StoreRating,
+          Store,
+          Sale,
+          StoreSocialLink,
         ],
         synchronize: configService.get('environment') !== 'production',
       }),

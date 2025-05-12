@@ -23,12 +23,14 @@
 ## 4. Módulos de Entidades
 - ✅ Implementar módulos para tiendas (stores)
 - ✅ Implementar módulos para ventas
-- ⬜ Implementar módulos para compras
+- ✅ Implementar módulos para compras
 - ✅ Implementar módulos para categorías/idiomas
-- ⬜ Implementar módulos para comentarios/favoritos
+- ✅ Implementar módulos para comentarios
+- ⬜ Implementar módulo de favoritos
 
 ## 5. Reputación, Badges y Destacados
-- ⬜ Implementar sistema de reputación para usuarios y tiendas
+- ✅ Implementar sistema de reputación para usuarios y tiendas (ratings por transacción)
+- ⬜ Validaciones avanzadas en ratings (no duplicados, no auto-rating, promedio)
 - ⬜ Implementar sistema de badges (insignias) para usuarios y tiendas
 - ⬜ Endpoints y lógica para destacados en home (usuarios y tiendas)
 

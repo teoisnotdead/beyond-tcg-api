@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StoreSocialLink } from './store-social-link.entity';
+import { StoreRating } from '../../ratings/entities/store-rating.entity';
 
 @Entity('stores')
 export class Store {
@@ -34,4 +35,7 @@ export class Store {
 
   @OneToMany(() => StoreSocialLink, (link) => link.store, { cascade: true })
   socialLinks: StoreSocialLink[];
+
+  @OneToMany(() => StoreRating, (rating) => rating.store)
+  ratings: StoreRating[];
 }

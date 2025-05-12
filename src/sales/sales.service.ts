@@ -21,6 +21,7 @@ export class SalesService {
   }
 
   async create(userId: string, createSaleDto: CreateSaleDto): Promise<Sale> {
+    // Create a new sale for the user
     const sale = this.salesRepository.create({
       ...createSaleDto,
       seller: { id: userId },
@@ -55,11 +56,11 @@ export class SalesService {
     const sale = await this.salesRepository.findOne({ where: { id: saleId } });
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.status !== 'available') throw new BadRequestException('Sale is not available');
-    // Aquí podrías guardar el buyerId en la venta si quieres
+    // Optionally, save buyerId in the sale
     sale.status = 'reserved';
     sale.reserved_at = new Date();
     await this.salesRepository.save(sale);
-    // Aquí puedes crear la notificación
+    // Notification logic here
     return { message: 'Sale reserved successfully' };
   }
 
@@ -72,32 +73,32 @@ export class SalesService {
     sale.shipping_proof_url = shippingProofUrl;
     sale.shipped_at = new Date();
     await this.salesRepository.save(sale);
-    // Notificación aquí
+    // Notification logic here
     return { message: 'Sale marked as shipped' };
   }
 
   async confirmDelivery(saleId: string, buyerId: string, deliveryProofUrl: string) {
     const sale = await this.salesRepository.findOne({ where: { id: saleId } });
     if (!sale) throw new NotFoundException('Sale not found');
-    // Aquí deberías validar que el buyerId es el que reservó la venta
+    // Optionally, validate that buyerId is the one who reserved the sale
     if (sale.status !== 'shipped') throw new BadRequestException('Sale is not shipped');
     sale.status = 'delivered';
     sale.delivery_proof_url = deliveryProofUrl;
     sale.delivered_at = new Date();
     await this.salesRepository.save(sale);
-    // Notificación aquí
+    // Notification logic here
     return { message: 'Sale marked as delivered' };
   }
 
   async cancelSale(saleId: string, userId: string) {
     const sale = await this.salesRepository.findOne({ where: { id: saleId } });
     if (!sale) throw new NotFoundException('Sale not found');
-    // Aquí puedes validar si el userId es el vendedor o el comprador
+    // Optionally, validate if userId is the seller or the buyer
     if (sale.status !== 'reserved') throw new BadRequestException('Sale cannot be cancelled');
     sale.status = 'cancelled';
     sale.cancelled_at = new Date();
     await this.salesRepository.save(sale);
-    // Notificación aquí
+    // Notification logic here
     return { message: 'Sale cancelled' };
   }
 }

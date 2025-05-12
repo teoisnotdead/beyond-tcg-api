@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
+import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -14,12 +15,19 @@ interface AuthRequest extends ExpressRequest {
 @Controller('sales')
 @UseGuards(JwtAuthGuard)
 export class SalesController {
-  constructor(private readonly salesService: SalesService) {}
+  constructor(
+    private readonly salesService: SalesService,
+    private readonly subscriptionValidationService: SubscriptionValidationService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new sale' })
   @ApiResponse({ status: 201, description: 'Sale created successfully.' })
-  create(@Request() req: AuthRequest, @Body() createSaleDto: CreateSaleDto) {
+  async create(@Request() req: AuthRequest, @Body() createSaleDto: CreateSaleDto) {
+    const canCreate = await this.subscriptionValidationService.canCreateSale(req.user.id);
+    if (!canCreate) {
+      throw new ForbiddenException('You have reached the limit of active sales according to your subscription plan.');
+    }
     return this.salesService.create(req.user.id, createSaleDto);
   }
 
@@ -47,7 +55,7 @@ export class SalesController {
   @Post(':id/reserve')
   @ApiOperation({ summary: 'Reserve a sale' })
   async reserveSale(@Param('id') id: string, @Request() req: AuthRequest) {
-    // Solo el comprador puede reservar
+    // Only the buyer can reserve
     return this.salesService.reserveSale(id, req.user.id);
   }
 
@@ -58,7 +66,7 @@ export class SalesController {
     @Request() req: AuthRequest,
     @Body('shipping_proof_url') shippingProofUrl: string
   ) {
-    // Solo el vendedor puede marcar como enviada
+    // Only the seller can mark as shipped
     return this.salesService.shipSale(id, req.user.id, shippingProofUrl);
   }
 
@@ -69,14 +77,14 @@ export class SalesController {
     @Request() req: AuthRequest,
     @Body('delivery_proof_url') deliveryProofUrl: string
   ) {
-    // Solo el comprador puede confirmar entrega
+    // Only the buyer can confirm delivery
     return this.salesService.confirmDelivery(id, req.user.id, deliveryProofUrl);
   }
 
   @Post(':id/cancel')
   @ApiOperation({ summary: 'Cancel sale' })
   async cancelSale(@Param('id') id: string, @Request() req: AuthRequest) {
-    // Vendedor o comprador pueden cancelar si está en reserved
+    // Seller or buyer can cancel if status is reserved
     return this.salesService.cancelSale(id, req.user.id);
   }
 }

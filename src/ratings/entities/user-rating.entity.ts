@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Sale } from '../../sales/entities/sale.entity';
 
 @Entity('UserRatings')
 export class UserRating {
@@ -20,4 +21,7 @@ export class UserRating {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @ManyToOne(() => Sale, { onDelete: 'CASCADE' })
+  sale: Sale;
 }

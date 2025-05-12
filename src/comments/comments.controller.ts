@@ -17,26 +17,26 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new comment or review', tags: ['comments'] })
+  @ApiOperation({ summary: 'Create a new comment or review' })
   @ApiResponse({ status: 201, description: 'Comment created successfully.' })
   create(@Request() req: AuthRequest, @Body() createCommentDto: CreateCommentDto) {
     return this.commentsService.create(req.user.id, createCommentDto);
   }
 
   @Get('sale/:saleId')
-  @ApiOperation({ summary: 'Get all comments for a sale', tags: ['comments'] })
+  @ApiOperation({ summary: 'Get all comments for a sale' })
   findAllForSale(@Param('saleId') saleId: string) {
     return this.commentsService.findAllForSale(saleId);
   }
 
   @Get('store/:storeId')
-  @ApiOperation({ summary: 'Get all comments for a store', tags: ['comments'] })
+  @ApiOperation({ summary: 'Get all comments for a store' })
   findAllForStore(@Param('storeId') storeId: string) {
     return this.commentsService.findAllForStore(storeId);
   }
 
   @Get('user/:userId')
-  @ApiOperation({ summary: 'Get all comments for a user', tags: ['comments'] })
+  @ApiOperation({ summary: 'Get all comments for a user' })
   findAllForUser(@Param('userId') userId: string) {
     return this.commentsService.findAllForUser(userId);
   }

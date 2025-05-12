@@ -18,6 +18,13 @@ import { UserRating } from './ratings/entities/user-rating.entity';
 import { Sale } from './sales/entities/sale.entity';
 import { Store } from './stores/entities/store.entity';
 import { StoreSocialLink } from './stores/entities/store-social-link.entity';
+import { Favorite } from './favorites/entities/favorite.entity';
+import { FavoritesModule } from './favorites/favorites.module';
+import { SalesModule } from './sales/sales.module';
+import { PurchasesModule } from './purchases/purchases.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { CommentsModule } from './comments/comments.module';
+import { StoresModule } from './stores/stores.module';
 
 @Module({
   imports: [
@@ -45,6 +52,7 @@ import { StoreSocialLink } from './stores/entities/store-social-link.entity';
           Store,
           Sale,
           StoreSocialLink,
+          Favorite,
         ],
         synchronize: configService.get('environment') !== 'production',
       }),
@@ -56,6 +64,12 @@ import { StoreSocialLink } from './stores/entities/store-social-link.entity';
     LanguagesModule,
     SubscriptionsModule,
     CloudinaryModule,
+    FavoritesModule,
+    SalesModule,
+    StoresModule,
+    PurchasesModule,
+    RatingsModule,
+    CommentsModule
   ],
 })
 export class AppModule {}

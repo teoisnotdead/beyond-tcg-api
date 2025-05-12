@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
+import { CommentsService } from '../comments/comments.service';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -18,10 +19,11 @@ export class StoresController {
   constructor(
     private readonly storesService: StoresService,
     private readonly subscriptionValidationService: SubscriptionValidationService,
+    private readonly commentsService: CommentsService,
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new store', tags: ['stores'] })
+  @ApiOperation({ summary: 'Create a new store' })
   @ApiResponse({ status: 201, description: 'Store created successfully.' })
   async create(@Request() req: AuthRequest, @Body() createStoreDto: CreateStoreDto) {
     const canCreate = await this.subscriptionValidationService.canCreateStore(req.user.id);
@@ -32,16 +34,22 @@ export class StoresController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all stores', tags: ['stores'] })
+  @ApiOperation({ summary: 'Get all stores' })
   @ApiResponse({ status: 200, description: 'Stores retrieved successfully.' })
   findAll() {
     return this.storesService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get store by ID', tags: ['stores'] })
+  @ApiOperation({ summary: 'Get store by ID' })
   @ApiResponse({ status: 200, description: 'Store retrieved successfully.' })
   findOne(@Param('id') id: string) {
     return this.storesService.findOne(id);
+  }
+
+  @Get(':id/comments')
+  @ApiOperation({ summary: 'Get all comments for this store' })
+  getCommentsForStore(@Param('id') id: string) {
+    return this.commentsService.findAllForStore(id);
   }
 }

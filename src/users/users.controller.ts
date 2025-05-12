@@ -7,12 +7,16 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CommentsService } from '../comments/comments.service';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly commentsService: CommentsService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,5 +78,11 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
+  }
+
+  @Get(':id/comments')
+  @ApiOperation({ summary: 'Get all comments for this user', tags: ['users'] })
+  getCommentsForUser(@Param('id') id: string) {
+    return this.commentsService.findAllForUser(id);
   }
 }

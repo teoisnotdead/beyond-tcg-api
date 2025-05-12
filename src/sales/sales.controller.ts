@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
+import { CommentsService } from '../comments/comments.service';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -18,6 +19,7 @@ export class SalesController {
   constructor(
     private readonly salesService: SalesService,
     private readonly subscriptionValidationService: SubscriptionValidationService,
+    private readonly commentsService: CommentsService,
   ) {}
 
   @Post()
@@ -86,5 +88,11 @@ export class SalesController {
   async cancelSale(@Param('id') id: string, @Request() req: AuthRequest) {
     // Seller or buyer can cancel if status is reserved
     return this.salesService.cancelSale(id, req.user.id);
+  }
+
+  @Get(':id/comments')
+  @ApiOperation({ summary: 'Get all comments for this sale' })
+  getCommentsForSale(@Param('id') id: string) {
+    return this.commentsService.findAllForSale(id);
   }
 }

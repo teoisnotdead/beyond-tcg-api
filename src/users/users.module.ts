@@ -5,6 +5,7 @@ import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
 import { SubscriptionPlan } from 'src/subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from 'src/subscriptions/entities/user-subscription.entity';
+import { CommentsModule } from '../comments/comments.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UserSubscription } from 'src/subscriptions/entities/user-subscription.e
       SubscriptionPlan,
       UserSubscription
     ]),
+    CommentsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

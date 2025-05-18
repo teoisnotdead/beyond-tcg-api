@@ -14,6 +14,7 @@ import { SalesModule } from '../sales/sales.module';
 import { PurchasesModule } from '../purchases/purchases.module';
 import { FavoritesModule } from '../favorites/favorites.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     forwardRef(() => SalesModule),
     forwardRef(() => PurchasesModule),
     forwardRef(() => FavoritesModule),
-    forwardRef(() => SubscriptionsModule)
+    forwardRef(() => SubscriptionsModule),
+    forwardRef(() => AuthModule)
   ],
   controllers: [UsersController],
   providers: [UsersService],

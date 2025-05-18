@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Comment } from './entities/comment.entity';
 import { CommentSubscription } from './entities/comment-subscription.entity';
@@ -9,7 +9,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Comment, CommentSubscription]),
-    NotificationsModule
+    forwardRef(() => NotificationsModule)
   ],
   providers: [CommentsService],
   controllers: [CommentsController],

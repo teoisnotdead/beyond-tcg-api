@@ -44,6 +44,9 @@ export class SalesService {
     if (!sale) {
       throw new NotFoundException('Sale not found');
     }
+    // Increment views
+    sale.views += 1;
+    await this.salesRepository.save(sale);
     return sale;
   }
 

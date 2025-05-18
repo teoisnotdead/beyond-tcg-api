@@ -8,6 +8,9 @@ import * as bcrypt from 'bcrypt';
 import { SubscriptionPlan } from 'src/subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from 'src/subscriptions/entities/user-subscription.entity';
 import { EnvConfig } from 'src/config/env.config';
+import { Sale } from '../sales/entities/sale.entity';
+import { Purchase } from '../purchases/entities/purchase.entity';
+import { Favorite } from '../favorites/entities/favorite.entity';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +21,12 @@ export class UsersService {
     private subscriptionPlansRepository: Repository<SubscriptionPlan>,
     @InjectRepository(UserSubscription)
     private userSubscriptionsRepository: Repository<UserSubscription>,
+    @InjectRepository(Sale)
+    private salesRepository: Repository<Sale>,
+    @InjectRepository(Purchase)
+    private purchasesRepository: Repository<Purchase>,
+    @InjectRepository(Favorite)
+    private favoriteRepository: Repository<Favorite>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -95,5 +104,34 @@ export class UsersService {
     if (result.affected === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+  }
+
+  async getStatistics(userId: string) {
+    // Purchases and money spent
+    const purchases = await this.purchasesRepository.find({ where: { user: { id: userId } } });
+    const totalPurchases = purchases.length;
+    const totalSpent = purchases.reduce((acc, p) => acc + Number(p.price) * p.quantity, 0);
+    // Sales and money earned
+    const sales = await this.salesRepository.find({ where: { seller: { id: userId } } });
+    const totalSales = sales.filter(s => s.status === 'completed').length;
+    const totalRevenue = sales.filter(s => s.status === 'completed').reduce((acc, s) => acc + Number(s.price) * s.quantity, 0);
+      // Favorites given
+    const favoritesGiven = await this.favoriteRepository.count({ where: { user: { id: userId } } });
+    // Favorites received (in user's sales)
+    const saleIds = sales.map(s => s.id);
+    let favoritesReceived = 0;
+    if (saleIds.length > 0) {
+      favoritesReceived = await this.favoriteRepository.createQueryBuilder('favorite')
+        .where('favorite.saleId IN (:...saleIds)', { saleIds })
+        .getCount();
+    }
+    return {
+      totalPurchases,
+      totalSpent,
+      totalSales,
+      totalRevenue,
+      favoritesGiven,
+      favoritesReceived
+    };
   }
 }

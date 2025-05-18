@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -8,6 +8,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CommentsService } from '../comments/comments.service';
+import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -16,6 +17,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly commentsService: CommentsService,
+    private readonly subscriptionValidationService: SubscriptionValidationService,
   ) {}
 
   @Post()
@@ -84,5 +86,17 @@ export class UsersController {
   @ApiOperation({ summary: 'Get all comments for this user', tags: ['users'] })
   getCommentsForUser(@Param('id') id: string) {
     return this.commentsService.findAllForUser(id);
+  }
+
+  @Get(':id/statistics')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get user statistics' })
+  async getUserStatistics(@Param('id') userId: string, @Request() req) {
+    // Validate user plan
+    const features = await this.subscriptionValidationService.getUserFeatures(req.user.id);
+    if (!features.statistics) {
+      throw new ForbiddenException('Your plan does not allow you to see statistics');
+    }
+    return this.usersService.getStatistics(userId);
   }
 }

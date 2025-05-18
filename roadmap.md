@@ -4,6 +4,7 @@
 - ✅ Crear archivo .env con variables esenciales
 - ✅ Instalar dependencias faltantes
 - ✅ Configurar TypeORM para PostgreSQL
+- ✅ Implementar sistema de migraciones y datos iniciales
 
 ## 2. Módulos Básicos
 - ✅ Crear estructura de carpetas para módulos
@@ -17,8 +18,8 @@
 - ✅ Implementar sistema de suscripciones con planes escalonados (Free, Pro, Tienda)
   - ✅ Lógica de límites de ventas por plan
   - ✅ Validación de creación de tienda según plan
-  - ⬜ Branding, estadísticas y destacados según plan
-- ⬜ Configurar WebSockets para notificaciones
+  - ✅ Branding, estadísticas y destacados según plan (estructura y features en migración)
+- ⬜ Configurar WebSockets para notificaciones (en progreso)
 
 ## 4. Módulos de Entidades
 - ✅ Implementar módulos para tiendas (stores)
@@ -36,5 +37,5 @@
 ## 6. Documentación y Finalización
 - ✅ Configurar Swagger para API docs
 - ✅ Implementar validaciones
-- ⬜ Configurar tareas programadas (cron jobs, expiración de suscripciones, etc.)
+- ✅ Configurar tareas programadas (cron jobs, expiración de suscripciones, etc.)
 - ⬜ Testing y optimización

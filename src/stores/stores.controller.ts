@@ -52,4 +52,15 @@ export class StoresController {
   getCommentsForStore(@Param('id') id: string) {
     return this.commentsService.findAllForStore(id);
   }
+
+  @Get(':id/statistics')
+  @ApiOperation({ summary: 'Get store statistics' })
+  async getStoreStatistics(@Param('id') storeId: string, @Request() req: AuthRequest) {
+    // Validate user plan
+    const features = await this.subscriptionValidationService.getUserFeatures(req.user.id);
+    if (!features.statistics) {
+      throw new ForbiddenException('Your plan does not allow you to see statistics');
+    }
+    return this.storesService.getStatistics(storeId);
+  }
 }

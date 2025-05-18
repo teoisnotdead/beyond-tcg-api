@@ -28,6 +28,8 @@
 - ✅ Implementar módulos para categorías/idiomas
 - ✅ Implementar módulos para comentarios
 - ✅ Implementar módulo de favoritos
+- ✅ Implementar paginación flexible y filtros avanzados en endpoints principales
+- ✅ Implementar endpoints de búsqueda avanzada (texto libre, filtros, paginación)
 
 ## 5. Reputación, Badges y Destacados
 - ✅ Implementar sistema de reputación para usuarios y tiendas (ratings por transacción, validaciones y promedio)
@@ -41,7 +43,7 @@
 - ⬜ Testing y optimización
   - ⬜ Tests unitarios
   - ⬜ Tests e2e
-  - ⬜ Optimización de queries
+  - ✅ Optimización de queries
   - ⬜ Implementación de cache
-  - ⬜ Mejora en manejo de errores
+  - ✅ Mejora en manejo de errores
   - ⬜ Documentación adicional de endpoints

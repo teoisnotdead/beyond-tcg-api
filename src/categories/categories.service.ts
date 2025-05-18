@@ -34,10 +34,11 @@ export class CategoriesService {
     return await this.categoriesRepository.save(category);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const result = await this.categoriesRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }
+    return { message: 'Category deleted successfully' };
   }
 } 

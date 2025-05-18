@@ -92,7 +92,7 @@ export class UsersService {
   async findOne(id: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`No se encontró un usuario con el ID ${id}`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
     return user;
   }
@@ -100,7 +100,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
-      throw new NotFoundException(`No se encontró un usuario con el email ${email}`);
+      throw new NotFoundException(`User with email ${email} not found`);
     }
     return user;
   }
@@ -115,11 +115,12 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const result = await this.usersRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+    return { message: 'User deleted successfully' };
   }
 
   async getStatistics(userId: string) {

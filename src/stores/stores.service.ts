@@ -68,7 +68,7 @@ export class StoresService {
       relations: ['user', 'socialLinks'],
     });
     if (!store) {
-      throw new NotFoundException('No se encontró la tienda solicitada');
+      throw new NotFoundException('Store not found');
     }
     return store;
   }

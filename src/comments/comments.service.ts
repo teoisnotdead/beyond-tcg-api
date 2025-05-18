@@ -45,7 +45,7 @@ export class CommentsService {
           user_id: sale.sale.seller.id,
           type: NotificationType.COMMENT_RECEIVED,
           title: 'Nuevo comentario en tu venta',
-          message: `Has recibido un nuevo comentario en tu venta`,
+          message: `Has received a new comment on your sale`,
           metadata: {
             comment_id: savedComment.id,
             sale_id: createCommentDto.sale_id,

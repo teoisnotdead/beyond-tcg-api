@@ -61,35 +61,33 @@ export class SalesService {
     return sale;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const result = await this.salesRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException('Sale not found');
     }
+    return { message: 'Sale deleted successfully' };
   }
 
   async reserveSale(saleId: string, buyerId: string) {
     const sale = await this.salesRepository.findOne({ where: { id: saleId } });
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.status !== 'available') throw new BadRequestException('Sale is not available');
-    // Optionally, save buyerId in the sale
     sale.status = 'reserved';
     sale.reserved_at = new Date();
     await this.salesRepository.save(sale);
-    // Notification logic here
     return { message: 'Sale reserved successfully' };
   }
 
   async shipSale(saleId: string, sellerId: string, shippingProofUrl: string) {
     const sale = await this.salesRepository.findOne({ where: { id: saleId } });
     if (!sale) throw new NotFoundException('Sale not found');
-    if (sale.seller.id !== sellerId) throw new ForbiddenException('Not your sale');
+    if (sale.seller.id !== sellerId) throw new ForbiddenException('You are not the seller of this sale');
     if (sale.status !== 'reserved') throw new BadRequestException('Sale is not reserved');
     sale.status = 'shipped';
     sale.shipping_proof_url = shippingProofUrl;
     sale.shipped_at = new Date();
     await this.salesRepository.save(sale);
-    // Notification logic here
     return { message: 'Sale marked as shipped' };
   }
 
@@ -116,12 +114,10 @@ export class SalesService {
   async cancelSale(saleId: string, userId: string) {
     const sale = await this.salesRepository.findOne({ where: { id: saleId } });
     if (!sale) throw new NotFoundException('Sale not found');
-    // Optionally, validate if userId is the seller or the buyer
     if (sale.status !== 'reserved') throw new BadRequestException('Sale cannot be cancelled');
     sale.status = 'cancelled';
     sale.cancelled_at = new Date();
     await this.salesRepository.save(sale);
-    // Notification logic here
     return { message: 'Sale cancelled' };
   }
 

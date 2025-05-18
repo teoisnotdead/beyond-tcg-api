@@ -34,10 +34,11 @@ export class LanguagesService {
     return await this.languagesRepository.save(language);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const result = await this.languagesRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Language with ID ${id} not found`);
     }
+    return { message: 'Language deleted successfully' };
   }
 } 

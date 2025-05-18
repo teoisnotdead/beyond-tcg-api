@@ -37,8 +37,8 @@ export class FavoritesService {
       await this.notificationsService.create({
         user_id: sale.sale.seller.id,
         type: NotificationType.FAVORITE_ADDED,
-        title: 'Nueva venta favorita',
-        message: 'Alguien ha marcado tu venta como favorita',
+        title: 'New favorite sale',
+        message: 'Someone has marked your sale as favorite',
         metadata: {
           favorite_id: savedFavorite.id,
           sale_id: createFavoriteDto.sale_id,

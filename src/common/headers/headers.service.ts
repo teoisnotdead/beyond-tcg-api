@@ -91,17 +91,11 @@ export class HeadersService {
 
     // Validate required and optional headers
     for (const [key, config] of Object.entries(headerConfig)) {
-      // Ensure config exists
       if (!config) continue;
-
       const value = headers[key.toLowerCase()];
-
-      // Validate if required
       if (config.required && !value) {
         throw new BadRequestException(`Header ${key} is required`);
       }
-
-      // If value exists, validate format
       if (value && config.validate) {
         try {
           const isValid = config.validate(value);
@@ -112,14 +106,15 @@ export class HeadersService {
           throw new BadRequestException(`Error validating header ${key}: ${error.message}`);
         }
       }
-
-      // Transform or assign the value
       if (value) {
         try {
+          const prop = key
+            .replace('x-', '')
+            .replace(/-([a-z])/g, (g) => g[1].toUpperCase());
           if (config.transform) {
-            validatedHeaders[key.replace('x-', '')] = config.transform(value);
+            validatedHeaders[prop] = config.transform(value);
           } else {
-            validatedHeaders[key.replace('x-', '')] = value;
+            validatedHeaders[prop] = value;
           }
         } catch (error) {
           throw new BadRequestException(`Error processing header ${key}: ${error.message}`);

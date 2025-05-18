@@ -39,8 +39,9 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Users retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Request() req) {
+    const { page = 1, limit = 20, ...filters } = req.query;
+    return this.usersService.findAll(Number(page), Number(limit), filters);
   }
 
   @Get('me')
@@ -98,5 +99,15 @@ export class UsersController {
       throw new ForbiddenException('Your plan does not allow you to see statistics');
     }
     return this.usersService.getStatistics(userId);
+  }
+
+  @Get('search')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Buscar usuarios por término, rol, paginación y offset' })
+  @ApiResponse({ status: 200, description: 'Usuarios encontrados.' })
+  async searchUsers(@Request() req) {
+    const { search, page = 1, limit = 20, offset, roles } = req.query;
+    return this.usersService.searchUsers({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, roles });
   }
 }

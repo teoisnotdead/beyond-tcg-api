@@ -32,8 +32,19 @@ export class SalesService {
     return this.salesRepository.save(sale);
   }
 
-  async findAll(): Promise<Sale[]> {
-    return this.salesRepository.find({ relations: ['seller', 'category', 'language'] });
+  async findAll(page: number = 1, limit: number = 20, filters: Partial<Sale> = {}): Promise<{ data: Sale[]; total: number; page: number; totalPages: number }> {
+    const [data, total] = await this.salesRepository.findAndCount({
+      where: filters,
+      relations: ['seller', 'category', 'language'],
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string): Promise<Sale> {
@@ -42,9 +53,9 @@ export class SalesService {
       relations: ['seller', 'category', 'language'],
     });
     if (!sale) {
-      throw new NotFoundException('Sale not found');
+      throw new NotFoundException('No se encontró la venta solicitada');
     }
-    // Increment views
+    // Incrementar vistas
     sale.views += 1;
     await this.salesRepository.save(sale);
     return sale;
@@ -112,5 +123,50 @@ export class SalesService {
     await this.salesRepository.save(sale);
     // Notification logic here
     return { message: 'Sale cancelled' };
+  }
+
+  async searchSales({ search, page = 1, limit = 20, offset, categories }: { search?: string; page?: number; limit?: number; offset?: number; categories?: string | string[] }) {
+    // Calcular offset
+    let skip = 0;
+    if (typeof offset !== 'undefined') {
+      skip = Number(offset);
+    } else {
+      skip = (Number(page) - 1) * Number(limit);
+    }
+    // Procesar categorías
+    let categoryIds: string[] | undefined = undefined;
+    if (categories) {
+      if (Array.isArray(categories)) {
+        categoryIds = categories;
+      } else {
+        categoryIds = categories.split(',');
+      }
+    }
+    // QueryBuilder
+    const qb = this.salesRepository.createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.seller', 'seller')
+      .leftJoinAndSelect('sale.category', 'category')
+      .leftJoinAndSelect('sale.language', 'language')
+      .where('sale.status = :status', { status: 'available' });
+    if (categoryIds && categoryIds.length > 0) {
+      qb.andWhere('sale.category_id IN (:...categoryIds)', { categoryIds });
+    }
+    if (search) {
+      qb.andWhere(`(
+        sale.name ILIKE :search OR
+        sale.description ILIKE :search OR
+        seller.name ILIKE :search
+      )`, { search: `%${search}%` });
+    }
+    qb.orderBy('sale.created_at', 'DESC')
+      .skip(skip)
+      .take(Number(limit));
+    const [sales, total] = await qb.getManyAndCount();
+    return {
+      sales,
+      totalPages: Math.ceil(total / Number(limit)),
+      currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
+      total
+    };
   }
 }

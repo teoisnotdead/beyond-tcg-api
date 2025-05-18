@@ -47,8 +47,19 @@ export class StoresService {
     return this.storesRepository.save(store);
   }
 
-  async findAll(): Promise<Store[]> {
-    return this.storesRepository.find({ relations: ['user', 'socialLinks'] });
+  async findAll(page: number = 1, limit: number = 20, filters: Partial<Store> = {}): Promise<{ data: Store[]; total: number; page: number; totalPages: number }> {
+    const [data, total] = await this.storesRepository.findAndCount({
+      where: filters,
+      relations: ['user', 'socialLinks'],
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string): Promise<Store> {
@@ -57,7 +68,7 @@ export class StoresService {
       relations: ['user', 'socialLinks'],
     });
     if (!store) {
-      throw new NotFoundException('Store not found');
+      throw new NotFoundException('No se encontró la tienda solicitada');
     }
     return store;
   }
@@ -152,6 +163,46 @@ export class StoresService {
       message: 'Branding actualizado',
       logo_url: store.avatar_url,
       banner_url: store.banner_url
+    };
+  }
+
+  async searchStores({ search, page = 1, limit = 20, offset, locations }: { search?: string; page?: number; limit?: number; offset?: number; locations?: string | string[] }) {
+    let skip = 0;
+    if (typeof offset !== 'undefined') {
+      skip = Number(offset);
+    } else {
+      skip = (Number(page) - 1) * Number(limit);
+    }
+    let locationList: string[] | undefined = undefined;
+    if (locations) {
+      if (Array.isArray(locations)) {
+        locationList = locations;
+      } else {
+        locationList = locations.split(',');
+      }
+    }
+    const qb = this.storesRepository.createQueryBuilder('store')
+      .leftJoinAndSelect('store.user', 'user')
+      .leftJoinAndSelect('store.socialLinks', 'socialLinks');
+    if (locationList && locationList.length > 0) {
+      qb.andWhere('store.location IN (:...locationList)', { locationList });
+    }
+    if (search) {
+      qb.andWhere(`(
+        store.name ILIKE :search OR
+        store.description ILIKE :search OR
+        user.name ILIKE :search
+      )`, { search: `%${search}%` });
+    }
+    qb.orderBy('store.created_at', 'DESC')
+      .skip(skip)
+      .take(Number(limit));
+    const [stores, total] = await qb.getManyAndCount();
+    return {
+      stores,
+      totalPages: Math.ceil(total / Number(limit)),
+      currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
+      total
     };
   }
 }

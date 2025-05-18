@@ -38,8 +38,9 @@ export class StoresController {
   @Get()
   @ApiOperation({ summary: 'Get all stores' })
   @ApiResponse({ status: 200, description: 'Stores retrieved successfully.' })
-  findAll() {
-    return this.storesService.findAll();
+  findAll(@Request() req) {
+    const { page = 1, limit = 20, ...filters } = req.query;
+    return this.storesService.findAll(Number(page), Number(limit), filters);
   }
 
   @Get(':id')
@@ -89,5 +90,13 @@ export class StoresController {
     let logoFile = files?.find(f => f.fieldname === 'logo');
     let bannerFile = files?.find(f => f.fieldname === 'banner');
     return this.storesService.updateBranding(storeId, logoFile, bannerFile);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Buscar tiendas por término, ubicación, paginación y offset' })
+  @ApiResponse({ status: 200, description: 'Tiendas encontradas.' })
+  async searchStores(@Request() req) {
+    const { search, page = 1, limit = 20, offset, locations } = req.query;
+    return this.storesService.searchStores({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, locations });
   }
 }

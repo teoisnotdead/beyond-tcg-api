@@ -36,8 +36,9 @@ export class SalesController {
   @Get()
   @ApiOperation({ summary: 'Get all sales' })
   @ApiResponse({ status: 200, description: 'Sales retrieved successfully.' })
-  findAll() {
-    return this.salesService.findAll();
+  findAll(@Request() req) {
+    const { page = 1, limit = 20, ...filters } = req.query;
+    return this.salesService.findAll(Number(page), Number(limit), filters);
   }
 
   @Get(':id')
@@ -94,5 +95,13 @@ export class SalesController {
   @ApiOperation({ summary: 'Get all comments for this sale' })
   getCommentsForSale(@Param('id') id: string) {
     return this.commentsService.findAllForSale(id);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Buscar ventas por término, categoría, paginación y offset' })
+  @ApiResponse({ status: 200, description: 'Ventas encontradas.' })
+  async searchSales(@Request() req) {
+    const { search, page = 1, limit = 20, offset, categories } = req.query;
+    return this.salesService.searchSales({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, categories });
   }
 }

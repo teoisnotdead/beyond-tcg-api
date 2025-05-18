@@ -75,14 +75,24 @@ export class UsersService {
     return savedUser;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+  async findAll(page: number = 1, limit: number = 20, filters: Partial<User> = {}): Promise<{ data: User[]; total: number; page: number; totalPages: number }> {
+    const [data, total] = await this.usersRepository.findAndCount({
+      where: filters,
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new NotFoundException(`No se encontró un usuario con el ID ${id}`);
     }
     return user;
   }
@@ -90,7 +100,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw new NotFoundException(`No se encontró un usuario con el email ${email}`);
     }
     return user;
   }
@@ -138,6 +148,43 @@ export class UsersService {
       totalRevenue,
       favoritesGiven,
       favoritesReceived
+    };
+  }
+
+  async searchUsers({ search, page = 1, limit = 20, offset, roles }: { search?: string; page?: number; limit?: number; offset?: number; roles?: string | string[] }) {
+    let skip = 0;
+    if (typeof offset !== 'undefined') {
+      skip = Number(offset);
+    } else {
+      skip = (Number(page) - 1) * Number(limit);
+    }
+    let roleList: string[] | undefined = undefined;
+    if (roles) {
+      if (Array.isArray(roles)) {
+        roleList = roles;
+      } else {
+        roleList = roles.split(',');
+      }
+    }
+    const qb = this.usersRepository.createQueryBuilder('user');
+    if (roleList && roleList.length > 0) {
+      qb.andWhere('user.role IN (:...roleList)', { roleList });
+    }
+    if (search) {
+      qb.andWhere(`(
+        user.name ILIKE :search OR
+        user.email ILIKE :search
+      )`, { search: `%${search}%` });
+    }
+    qb.orderBy('user.created_at', 'DESC')
+      .skip(skip)
+      .take(Number(limit));
+    const [users, total] = await qb.getManyAndCount();
+    return {
+      users,
+      totalPages: Math.ceil(total / Number(limit)),
+      currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
+      total
     };
   }
 }

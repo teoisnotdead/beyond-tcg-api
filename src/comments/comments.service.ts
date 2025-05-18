@@ -123,4 +123,12 @@ export class CommentsService {
       order: { created_at: 'DESC' },
     });
   }
+
+  async findAllByAuthor(userId: string): Promise<Comment[]> {
+    return this.commentsRepository.find({
+      where: { user: { id: userId } },
+      relations: ['user'],
+      order: { created_at: 'DESC' },
+    });
+  }
 }

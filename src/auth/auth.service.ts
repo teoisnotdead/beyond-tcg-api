@@ -43,7 +43,7 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const existing = await this.usersService.findByEmail(registerDto.email).catch(() => null);
     if (existing) {
-      throw new ConflictException('El usuario ya existe');
+      throw new ConflictException('User with this email already exists');
     }
     const user = await this.usersService.create(registerDto);
     const payload = { sub: user.id, email: user.email, role: user.role };

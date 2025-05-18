@@ -134,12 +134,15 @@ CREATE TABLE Sales (
     created_at TIMESTAMP DEFAULT now()
 );
 
-CREATE TABLE Comments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sale_id UUID REFERENCES Sales(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES Users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT now()
+CREATE TABLE comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  sale_id UUID REFERENCES sales(id) ON DELETE CASCADE,
+  store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
+  target_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  rating INTEGER,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
 );
 
 CREATE TABLE Purchases (

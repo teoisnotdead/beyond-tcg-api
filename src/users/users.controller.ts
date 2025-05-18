@@ -54,6 +54,16 @@ export class UsersController {
     return this.usersService.findOne(req.user.id);
   }
 
+  @Get('search')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Buscar usuarios por término, rol, paginación y offset' })
+  @ApiResponse({ status: 200, description: 'Usuarios encontrados.' })
+  async searchUsers(@Request() req) {
+    const { search, page = 1, limit = 20, offset, roles } = req.query;
+    return this.usersService.searchUsers({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, roles });
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get user by ID' })
@@ -90,6 +100,12 @@ export class UsersController {
     return this.commentsService.findAllForUser(id);
   }
 
+  @Get(':id/comments-authored')
+  @ApiOperation({ summary: 'Get all comments authored by this user', tags: ['users'] })
+  getCommentsAuthoredByUser(@Param('id') id: string) {
+    return this.commentsService.findAllByAuthor(id);
+  }
+
   @Get(':id/statistics')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get user statistics' })
@@ -100,16 +116,6 @@ export class UsersController {
       throw new ForbiddenException('Your plan does not allow you to see statistics');
     }
     return this.usersService.getStatistics(userId);
-  }
-
-  @Get('search')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Buscar usuarios por término, rol, paginación y offset' })
-  @ApiResponse({ status: 200, description: 'Usuarios encontrados.' })
-  async searchUsers(@Request() req) {
-    const { search, page = 1, limit = 20, offset, roles } = req.query;
-    return this.usersService.searchUsers({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, roles });
   }
 
   @Get('profile/metadata')

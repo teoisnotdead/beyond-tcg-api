@@ -32,6 +32,8 @@ import { FeaturedModule } from './featured/featured.module';
 import { HeadersModule } from './common/headers/headers.module';
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalHttpExceptionFilter } from './common/http-exception.filter';
+import { Comment } from './comments/entities/comment.entity';
+import { CommentSubscription } from './comments/entities/comment-subscription.entity';
 
 @Module({
   imports: [
@@ -62,6 +64,8 @@ import { GlobalHttpExceptionFilter } from './common/http-exception.filter';
           StoreSocialLink,
           Favorite,
           Notification,
+          Comment,
+          CommentSubscription,
         ],
         synchronize: false,
       }),

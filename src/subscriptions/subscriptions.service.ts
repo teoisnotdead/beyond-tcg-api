@@ -24,8 +24,7 @@ export class SubscriptionsService {
       throw new NotFoundException('User has no active subscription');
     }
     const subscription = await this.userSubscriptionsRepository.findOne({
-      where: { id: user.current_subscription_id },
-      relations: ['plan_id'],
+      where: { id: user.current_subscription_id }
     });
     if (!subscription) {
       throw new NotFoundException('Subscription not found');

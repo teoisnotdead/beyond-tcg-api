@@ -116,76 +116,91 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<{ message: string }> {
-    const result = await this.usersRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+    try {
+      const result = await this.usersRepository.delete(id);
+      if (result.affected === 0) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+      return { message: 'User deleted successfully' };
+    } catch (error) {
+      throw error;
     }
-    return { message: 'User deleted successfully' };
   }
 
   async getStatistics(userId: string) {
-    // Purchases and money spent
-    const purchases = await this.purchasesRepository.find({ where: { user: { id: userId } } });
-    const totalPurchases = purchases.length;
-    const totalSpent = purchases.reduce((acc, p) => acc + Number(p.price) * p.quantity, 0);
-    // Sales and money earned
-    const sales = await this.salesRepository.find({ where: { seller: { id: userId } } });
-    const totalSales = sales.filter(s => s.status === 'completed').length;
-    const totalRevenue = sales.filter(s => s.status === 'completed').reduce((acc, s) => acc + Number(s.price) * s.quantity, 0);
+    try {
+      // Purchases and money spent
+      const purchases = await this.purchasesRepository.find({ where: { user: { id: userId } } });
+      const totalPurchases = purchases.length;
+      const totalSpent = purchases.reduce((acc, p) => acc + Number(p.price) * p.quantity, 0);
+      // Sales and money earned
+      const sales = await this.salesRepository.find({ where: { seller: { id: userId } } });
+      const totalSales = sales.filter(s => s.status === 'completed').length;
+      const totalRevenue = sales.filter(s => s.status === 'completed').reduce((acc, s) => acc + Number(s.price) * s.quantity, 0);
       // Favorites given
-    const favoritesGiven = await this.favoriteRepository.count({ where: { user: { id: userId } } });
-    // Favorites received (in user's sales)
-    const saleIds = sales.map(s => s.id);
-    let favoritesReceived = 0;
-    if (saleIds.length > 0) {
-      favoritesReceived = await this.favoriteRepository.createQueryBuilder('favorite')
-        .where('favorite.saleId IN (:...saleIds)', { saleIds })
-        .getCount();
+      const favoritesGiven = await this.favoriteRepository.count({ where: { user: { id: userId } } });
+      // Favorites received (in user's sales)
+      const saleIds = sales.map(s => s.id);
+      let favoritesReceived = 0;
+      if (saleIds.length > 0) {
+        favoritesReceived = await this.favoriteRepository.createQueryBuilder('favorite')
+          .where('favorite.saleId IN (:...saleIds)', { saleIds })
+          .getCount();
+      }
+      return {
+        totalPurchases,
+        totalSpent,
+        totalSales,
+        totalRevenue,
+        favoritesGiven,
+        favoritesReceived
+      };
+    } catch (error) {
+      console.error('[USERS SERVICE] Error en getStatistics:', error);
+      throw error;
     }
-    return {
-      totalPurchases,
-      totalSpent,
-      totalSales,
-      totalRevenue,
-      favoritesGiven,
-      favoritesReceived
-    };
   }
 
   async searchUsers({ search, page = 1, limit = 20, offset, roles }: { search?: string; page?: number; limit?: number; offset?: number; roles?: string | string[] }) {
-    let skip = 0;
-    if (typeof offset !== 'undefined') {
-      skip = Number(offset);
-    } else {
-      skip = (Number(page) - 1) * Number(limit);
-    }
-    let roleList: string[] | undefined = undefined;
-    if (roles) {
-      if (Array.isArray(roles)) {
-        roleList = roles;
+    try {
+      let skip = 0;
+      if (typeof offset !== 'undefined') {
+        skip = Number(offset);
       } else {
-        roleList = roles.split(',');
+        skip = (Number(page) - 1) * Number(limit);
       }
+      let roleList: string[] | undefined = undefined;
+      if (roles) {
+        if (Array.isArray(roles)) {
+          roleList = roles;
+        } else {
+          roleList = roles.split(',');
+        }
+      }
+      const qb = this.usersRepository.createQueryBuilder('user');
+      if (roleList && roleList.length > 0) {
+        qb.andWhere('user.role IN (:...roleList)', { roleList });
+      }
+      if (search) {
+        qb.andWhere(`(
+          user.name ILIKE :search OR
+          user.email ILIKE :search
+        )`, { search: `%${search}%` });
+      }
+      qb.orderBy('user.created_at', 'DESC')
+        .skip(skip)
+        .take(Number(limit));
+      const [users, total] = await qb.getManyAndCount();
+      const result = {
+        users,
+        totalPages: Math.ceil(total / Number(limit)),
+        currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
+        total
+      };
+      return result;
+    } catch (error) {
+      console.error('[USERS SERVICE] Error en searchUsers:', error);
+      throw error;
     }
-    const qb = this.usersRepository.createQueryBuilder('user');
-    if (roleList && roleList.length > 0) {
-      qb.andWhere('user.role IN (:...roleList)', { roleList });
-    }
-    if (search) {
-      qb.andWhere(`(
-        user.name ILIKE :search OR
-        user.email ILIKE :search
-      )`, { search: `%${search}%` });
-    }
-    qb.orderBy('user.created_at', 'DESC')
-      .skip(skip)
-      .take(Number(limit));
-    const [users, total] = await qb.getManyAndCount();
-    return {
-      users,
-      totalPages: Math.ceil(total / Number(limit)),
-      currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
-      total
-    };
   }
 }

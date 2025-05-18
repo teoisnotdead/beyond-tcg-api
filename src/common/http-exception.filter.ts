@@ -18,6 +18,15 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let error = 'Error';
 
+    // Known status map
+    const statusMap: Record<number, { defaultMessage: string; defaultError: string }> = {
+      400: { defaultMessage: 'Bad Request', defaultError: 'BadRequestException' },
+      401: { defaultMessage: 'Unauthorized', defaultError: 'UnauthorizedException' },
+      403: { defaultMessage: 'Forbidden', defaultError: 'ForbiddenException' },
+      404: { defaultMessage: 'Not Found', defaultError: 'NotFoundException' },
+      409: { defaultMessage: 'Conflict', defaultError: 'ConflictException' },
+    };
+
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
@@ -28,11 +37,12 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
         error = (res as any).error || exception.name;
       }
     } else if (exception && typeof exception === 'object') {
-      // For errors thrown by passport, jwt, etc.
-      if (exception.status === 401 || exception.statusCode === 401) {
-        status = 401;
-        message = exception.message || 'Unauthorized';
-        error = exception.name || 'Unauthorized';
+      // Search for status in the exception object
+      const possibleStatus = exception.statusCode || exception.status;
+      if (possibleStatus && statusMap[possibleStatus]) {
+        status = possibleStatus;
+        message = exception.message || statusMap[possibleStatus].defaultMessage;
+        error = exception.name || statusMap[possibleStatus].defaultError;
       }
     }
 
@@ -46,5 +56,9 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
     });
+
+    if (status === 500) {
+      console.error('Unhandled error in GlobalHttpExceptionFilter:', exception);
+    }
   }
 } 

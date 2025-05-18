@@ -64,6 +64,13 @@ export class HeadersService {
     private readonly reflector: Reflector,
   ) {}
 
+  /**
+   * Validates all headers according to the configuration
+   * @param headers - Request headers to validate
+   * @param handler - Optional handler for endpoint-specific validation
+   * @returns Validated headers object
+   * @throws BadRequestException if validation fails
+   */
   validateHeaders(headers: Record<string, string>, handler?: any): ValidatedHeaders {
     const validatedHeaders: Partial<ValidatedHeaders> = {};
     
@@ -143,30 +150,52 @@ export class HeadersService {
     return validatedHeaders as ValidatedHeaders;
   }
 
+  /**
+   * Validates the API key against configured valid keys
+   * @param apiKey - API key to validate
+   * @returns boolean indicating if the key is valid
+   */
   private validateApiKey(apiKey: string): boolean {
     const validApiKeys = this.configService.get<string[]>('VALID_API_KEYS') || [];
     return validApiKeys.includes(apiKey);
   }
 
+  /**
+   * Validates the client secret against configured valid secrets
+   * @param secret - Client secret to validate
+   * @returns boolean indicating if the secret is valid
+   */
   private validateClientSecret(secret: string): boolean {
     const validSecrets = this.configService.get<string[]>('VALID_CLIENT_SECRETS') || [];
     return validSecrets.includes(secret);
   }
 
+  /**
+   * Validates that the environment ID sent by the frontend is valid
+   * @param envId - Environment ID to validate
+   * @returns boolean indicating if the ID is valid
+   */
   private validateEnvironmentId(envId: string): boolean {
-    // Obtener los IDs de ambiente desde la configuración
+    // Get environment IDs from configuration
     const validEnvIds = this.configService.get('environmentIds');
     
     if (!validEnvIds) {
       throw new Error('Environment IDs not configured in backend');
     }
 
-    // Verificar que el ID enviado por el frontend coincida con alguno de los configurados
+    // Check if the ID sent by frontend matches any configured ID
     return Object.values(validEnvIds).includes(envId);
   }
 
+  /**
+   * Validates that the environment ID matches the declared environment
+   * @param envId - Environment ID sent by frontend
+   * @param environment - Environment declared by frontend
+   * @returns boolean indicating if the match is valid
+   * @throws UnauthorizedException if the ID doesn't match
+   */
   private validateEnvironmentMatch(envId: string, environment: Environment): boolean {
-    // Obtener el ID de ambiente esperado desde la configuración
+    // Get expected environment ID from configuration
     const validEnvIds = this.configService.get('environmentIds');
     const expectedEnvId = validEnvIds?.[environment.toLowerCase()];
 
@@ -174,7 +203,7 @@ export class HeadersService {
       throw new Error(`Environment ID not configured in backend for ${environment}`);
     }
 
-    // Validar que el ID enviado por el frontend coincida con el esperado
+    // Validate that the ID sent by frontend matches the expected one
     const isValid = envId === expectedEnvId;
     
     if (!isValid) {

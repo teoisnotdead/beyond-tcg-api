@@ -6,6 +6,8 @@ import { CreateStoreDto } from './dto/create-store.dto';
 import { StoreSocialLink } from './entities/store-social-link.entity';
 import { Sale } from '../sales/entities/sale.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { Inject } from '@nestjs/common';
 
 @Injectable()
 export class StoresService {
@@ -18,6 +20,8 @@ export class StoresService {
     private salesRepository: Repository<Sale>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
+    @Inject(CloudinaryService)
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async create(userId: string, createStoreDto: CreateStoreDto): Promise<Store> {
@@ -123,6 +127,31 @@ export class StoresService {
       totalFavorites,
       topProducts,
       salesByMonth
+    };
+  }
+
+  async updateBranding(storeId: string, logoFile?: Express.Multer.File, bannerFile?: Express.Multer.File) {
+    const store = await this.findOne(storeId);
+    let updated = false;
+    // Subir logo si viene
+    if (logoFile) {
+      const logoResult: any = await this.cloudinaryService.uploadImage(logoFile, 'Beyond TCG/stores/logos');
+      store.avatar_url = logoResult.secure_url;
+      updated = true;
+    }
+    // Subir banner si viene
+    if (bannerFile) {
+      const bannerResult: any = await this.cloudinaryService.uploadImage(bannerFile, 'Beyond TCG/stores/banners');
+      store.banner_url = bannerResult.secure_url;
+      updated = true;
+    }
+    if (updated) {
+      await this.storesRepository.save(store);
+    }
+    return {
+      message: 'Branding actualizado',
+      logo_url: store.avatar_url,
+      banner_url: store.banner_url
     };
   }
 }

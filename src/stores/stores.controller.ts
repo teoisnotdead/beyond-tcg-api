@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Param, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Param, ForbiddenException, Put, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -6,6 +6,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 import { CommentsService } from '../comments/comments.service';
+import { UpdateStoreBrandingDto } from './dto/update-store-branding.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -62,5 +64,30 @@ export class StoresController {
       throw new ForbiddenException('Your plan does not allow you to see statistics');
     }
     return this.storesService.getStatistics(storeId);
+  }
+
+  @Put(':id/branding')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FilesInterceptor('files'))
+  @ApiOperation({ summary: 'Update store branding (logo/banner)' })
+  async updateBranding(
+    @Param('id') storeId: string,
+    @Request() req: AuthRequest,
+    @UploadedFiles() files: Array<Express.Multer.File>
+  ) {
+    // Validate user plan
+    const features = await this.subscriptionValidationService.getUserFeatures(req.user.id);
+    if (!features.branding) {
+      throw new ForbiddenException('Your plan does not allow you to customize branding');
+    }
+    // Validate that the user is the owner of the store
+    const store = await this.storesService.findOne(storeId);
+    if (store.user.id !== req.user.id) {
+      throw new ForbiddenException('Only the owner can modify the store branding');
+    }
+    // Search for logo and banner files
+    let logoFile = files?.find(f => f.fieldname === 'logo');
+    let bannerFile = files?.find(f => f.fieldname === 'banner');
+    return this.storesService.updateBranding(storeId, logoFile, bannerFile);
   }
 }

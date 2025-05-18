@@ -27,6 +27,7 @@ import { CommentsModule } from './comments/comments.module';
 import { StoresModule } from './stores/stores.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
+import { FeaturedModule } from './featured/featured.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { Notification } from './notifications/entities/notification.entity';
     RatingsModule,
     CommentsModule,
     NotificationsModule,
+    FeaturedModule,
   ],
 })
 export class AppModule {}

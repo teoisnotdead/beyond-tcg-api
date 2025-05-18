@@ -19,7 +19,7 @@
   - ✅ Lógica de límites de ventas por plan
   - ✅ Validación de creación de tienda según plan
   - ✅ Branding, estadísticas y destacados según plan (estructura y features en migración)
-- ⬜ Configurar WebSockets para notificaciones (en progreso)
+- ✅ Configurar WebSockets para notificaciones
 
 ## 4. Módulos de Entidades
 - ✅ Implementar módulos para tiendas (stores)
@@ -31,11 +31,17 @@
 
 ## 5. Reputación, Badges y Destacados
 - ✅ Implementar sistema de reputación para usuarios y tiendas (ratings por transacción, validaciones y promedio)
+- ✅ Implementar endpoints y lógica para destacados en home (usuarios y tiendas)
 - ⬜ Implementar sistema de badges (insignias) para usuarios y tiendas
-- ⬜ Endpoints y lógica para destacados en home (usuarios y tiendas)
 
 ## 6. Documentación y Finalización
 - ✅ Configurar Swagger para API docs
 - ✅ Implementar validaciones
 - ✅ Configurar tareas programadas (cron jobs, expiración de suscripciones, etc.)
 - ⬜ Testing y optimización
+  - ⬜ Tests unitarios
+  - ⬜ Tests e2e
+  - ⬜ Optimización de queries
+  - ⬜ Implementación de cache
+  - ⬜ Mejora en manejo de errores
+  - ⬜ Documentación adicional de endpoints

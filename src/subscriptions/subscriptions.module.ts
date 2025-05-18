@@ -11,7 +11,7 @@ import { SalesModule } from '../sales/sales.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => SalesModule),
   ],
   controllers: [SubscriptionsController],

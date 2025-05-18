@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -35,6 +36,7 @@ import { FeaturedModule } from './featured/featured.module';
       isGlobal: true,
       load: [EnvConfig],
     }),
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -58,7 +60,7 @@ import { FeaturedModule } from './featured/featured.module';
           Favorite,
           Notification,
         ],
-        synchronize: configService.get('environment') !== 'production',
+        synchronize: false,
       }),
       inject: [ConfigService],
     }),

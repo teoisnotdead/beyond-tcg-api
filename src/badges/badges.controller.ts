@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Post, Body, Delete, UseGuards, Put, UsePipes, ValidationPipe } from '@nestjs/common';
 import { BadgesService } from './badges.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateBadgeDto } from './dto/create-badge.dto';
 import { UpdateBadgeDto } from './dto/update-badge.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';

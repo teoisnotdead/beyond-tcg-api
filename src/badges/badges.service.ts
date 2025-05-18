@@ -78,7 +78,7 @@ export class BadgesService {
     return this.badgeRepository.save(badge);
   }
 
-  async updateBadge(id: string, dto: UpdateBadgeDto): Promise<Badge> {
+  async updateBadge(id: string, dto: UpdateBadgeDto): Promise<Badge | null> {
     await this.badgeRepository.update(id, dto);
     return this.badgeRepository.findOneBy({ id });
   }

@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
 import { NotificationsService } from './notifications.service';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
@@ -22,7 +23,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationsService: NotificationsService,
+  ) {}
 
   async handleConnection(client: Socket) {
     try {

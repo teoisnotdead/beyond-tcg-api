@@ -2,6 +2,13 @@ export const EnvConfig = () => ({
   port: process.env.PORT || 3000,
   environment: process.env.NODE_ENV || 'development',
 
+  // Environment IDs for header validation
+  environmentIds: {
+    development: process.env.ENV_ID_DEVELOPMENT || 'dev-default-id',
+    qa: process.env.ENV_ID_QA || 'qa-default-id',
+    production: process.env.ENV_ID_PRODUCTION || 'prod-default-id',
+  },
+
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),

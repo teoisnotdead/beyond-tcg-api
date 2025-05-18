@@ -22,6 +22,12 @@ export enum Channel {
   API = 'api',
 }
 
+export enum Environment {
+  DEVELOPMENT = 'development',
+  QA = 'qa',
+  PRODUCTION = 'production',
+}
+
 export interface HeaderValidationOptions {
   required?: boolean;
   validate?: (value: string) => boolean;
@@ -45,4 +51,6 @@ export interface ValidatedHeaders {
   channel: Channel;
   apiKey?: string;
   clientSecret?: string;
+  environmentId: string;  // UUID for environment validation
+  environment: Environment;  // Current environment (development, qa, production)
 } 

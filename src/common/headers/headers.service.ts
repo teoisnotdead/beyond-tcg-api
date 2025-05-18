@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { HeaderConfig, ValidatedHeaders, Platform, Channel } from './types/header.types';
+import { HeaderConfig, ValidatedHeaders, Platform, Channel, Environment } from './types/header.types';
 import { ConfigService } from '@nestjs/config';
 import { REQUIRE_HEADERS_KEY } from './decorators/require-headers.decorator';
 import { Reflector } from '@nestjs/core';
@@ -48,6 +48,14 @@ export class HeadersService {
     'x-client-secret': {
       required: false,
       validate: (value) => this.validateClientSecret(value),
+    },
+    'x-environment-id': {
+      required: true,
+      validate: (value) => this.validateEnvironmentId(value),
+    },
+    'x-environment': {
+      required: true,
+      validate: (value) => Object.values(Environment).includes(value as Environment),
     },
   };
 
@@ -122,6 +130,16 @@ export class HeadersService {
       throw new UnauthorizedException('Invalid client secret');
     }
 
+    // Ensure environment headers are present before validation
+    if (!validatedHeaders.environmentId || !validatedHeaders.environment) {
+      throw new BadRequestException('Environment headers are required');
+    }
+
+    // Validate environment ID matches current environment
+    if (!this.validateEnvironmentMatch(validatedHeaders.environmentId, validatedHeaders.environment)) {
+      throw new UnauthorizedException('Environment ID does not match current environment');
+    }
+
     return validatedHeaders as ValidatedHeaders;
   }
 
@@ -133,5 +151,39 @@ export class HeadersService {
   private validateClientSecret(secret: string): boolean {
     const validSecrets = this.configService.get<string[]>('VALID_CLIENT_SECRETS') || [];
     return validSecrets.includes(secret);
+  }
+
+  private validateEnvironmentId(envId: string): boolean {
+    // Obtener los IDs de ambiente desde la configuración
+    const validEnvIds = this.configService.get('environmentIds');
+    
+    if (!validEnvIds) {
+      throw new Error('Environment IDs not configured in backend');
+    }
+
+    // Verificar que el ID enviado por el frontend coincida con alguno de los configurados
+    return Object.values(validEnvIds).includes(envId);
+  }
+
+  private validateEnvironmentMatch(envId: string, environment: Environment): boolean {
+    // Obtener el ID de ambiente esperado desde la configuración
+    const validEnvIds = this.configService.get('environmentIds');
+    const expectedEnvId = validEnvIds?.[environment.toLowerCase()];
+
+    if (!expectedEnvId) {
+      throw new Error(`Environment ID not configured in backend for ${environment}`);
+    }
+
+    // Validar que el ID enviado por el frontend coincida con el esperado
+    const isValid = envId === expectedEnvId;
+    
+    if (!isValid) {
+      throw new UnauthorizedException(
+        `Invalid environment ID for ${environment}. ` +
+        'The frontend must send the correct environment ID for the current environment.'
+      );
+    }
+
+    return true;
   }
 } 

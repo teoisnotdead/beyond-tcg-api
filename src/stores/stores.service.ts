@@ -144,21 +144,33 @@ export class StoresService {
   async updateBranding(storeId: string, logoFile?: Express.Multer.File, bannerFile?: Express.Multer.File) {
     const store = await this.findOne(storeId);
     let updated = false;
-    // Subir logo si viene
+
+    // Update logo if provided
     if (logoFile) {
-      const logoResult: any = await this.cloudinaryService.uploadImage(logoFile, 'Beyond TCG/stores/logos');
+      const logoResult: any = await this.cloudinaryService.updateImage(
+        logoFile,
+        store.avatar_url || null,
+        'Beyond TCG/stores/logos'
+      );
       store.avatar_url = logoResult.secure_url;
       updated = true;
     }
-    // Subir banner si viene
+
+    // Update banner if provided
     if (bannerFile) {
-      const bannerResult: any = await this.cloudinaryService.uploadImage(bannerFile, 'Beyond TCG/stores/banners');
+      const bannerResult: any = await this.cloudinaryService.updateImage(
+        bannerFile,
+        store.banner_url || null,
+        'Beyond TCG/stores/banners'
+      );
       store.banner_url = bannerResult.secure_url;
       updated = true;
     }
+
     if (updated) {
       await this.storesRepository.save(store);
     }
+
     return {
       message: 'Branding actualizado',
       logo_url: store.avatar_url,

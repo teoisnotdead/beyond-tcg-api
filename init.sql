@@ -178,6 +178,44 @@ CREATE TABLE Notifications (
     updated_at TIMESTAMP DEFAULT now()
 );
 
+-- Tablas de Badges
+CREATE TABLE Badges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('user', 'store')),
+    category VARCHAR(20) NOT NULL CHECK (category IN ('level', 'reputation', 'plan', 'volume', 'quality', 'specialty')),
+    icon_url VARCHAR(255) NOT NULL,
+    criteria JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);
+
+CREATE TABLE UserBadges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES Users(id) ON DELETE CASCADE,
+    badge_id UUID REFERENCES Badges(id) ON DELETE CASCADE,
+    awarded_at TIMESTAMP DEFAULT now(),
+    expires_at TIMESTAMP,
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now(),
+    UNIQUE(user_id, badge_id)
+);
+
+CREATE TABLE StoreBadges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    store_id UUID REFERENCES Stores(id) ON DELETE CASCADE,
+    badge_id UUID REFERENCES Badges(id) ON DELETE CASCADE,
+    awarded_at TIMESTAMP DEFAULT now(),
+    expires_at TIMESTAMP,
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now(),
+    UNIQUE(store_id, badge_id)
+);
+
 -- Índices útiles
 CREATE INDEX idx_categories_slug ON Categories(slug);
 CREATE INDEX idx_categories_display_order ON Categories(display_order);
@@ -189,6 +227,17 @@ CREATE INDEX idx_notifications_created_at ON Notifications(created_at);
 CREATE INDEX idx_usersubscriptions_user_id ON UserSubscriptions(user_id);
 CREATE INDEX idx_usersubscriptions_end_date ON UserSubscriptions(end_date);
 CREATE INDEX idx_usersubscriptions_is_active ON UserSubscriptions(is_active);
+
+-- Índices para Badges
+CREATE INDEX idx_badges_type ON Badges(type);
+CREATE INDEX idx_badges_category ON Badges(category);
+CREATE INDEX idx_badges_is_active ON Badges(is_active);
+CREATE INDEX idx_userbadges_user_id ON UserBadges(user_id);
+CREATE INDEX idx_userbadges_badge_id ON UserBadges(badge_id);
+CREATE INDEX idx_userbadges_expires_at ON UserBadges(expires_at);
+CREATE INDEX idx_storebadges_store_id ON StoreBadges(store_id);
+CREATE INDEX idx_storebadges_badge_id ON StoreBadges(badge_id);
+CREATE INDEX idx_storebadges_expires_at ON StoreBadges(expires_at);
 
 -- Datos iniciales de categorías e idiomas (puedes copiar los que ya tienes)
 
@@ -234,3 +283,76 @@ VALUES
   (gen_random_uuid(), 'Free', 0.00, 3650, 'Plan gratuito por defecto', '{"maxSales": 10, "canCreateStore": false, "branding": false, "statistics": false, "featured": false, "support": "community"}', true, now(), now()),
   (gen_random_uuid(), 'Pro', 4.99, 30, 'Plan Pro para usuarios avanzados', '{"maxSales": 50, "canCreateStore": false, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now()),
   (gen_random_uuid(), 'Tienda', 9.99, 30, 'Plan para tiendas profesionales', '{"maxSales": 1000, "canCreateStore": true, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now());
+
+-- Datos iniciales de Badges
+-- Usando placeholders de iconos de FontAwesome (gratuitos y ampliamente usados)
+INSERT INTO Badges (name, description, type, category, icon_url, criteria, is_active) VALUES
+    -- Badges de Nivel para Usuarios
+    ('rookie', 'Primeras ventas/compras completadas', 'user', 'level', 
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/seedling.svg',
+     '{"type": "transactions", "count": 5, "period": "all_time"}', true),
+    
+    ('experienced', 'Más de 50 transacciones completadas', 'user', 'level',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/star.svg',
+     '{"type": "transactions", "count": 50, "period": "all_time"}', true),
+    
+    ('expert', 'Más de 200 transacciones completadas', 'user', 'level',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/crown.svg',
+     '{"type": "transactions", "count": 200, "period": "all_time"}', true),
+    
+    -- Badges de Reputación para Usuarios
+    ('trusted_seller', 'Rating promedio superior a 4.5', 'user', 'reputation',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/shield-check.svg',
+     '{"type": "rating", "min_average": 4.5, "min_ratings": 10}', true),
+    
+    ('fast_shipper', 'Envíos confirmados en menos de 48h', 'user', 'reputation',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/truck-fast.svg',
+     '{"type": "shipping_time", "max_hours": 48, "min_sales": 5}', true),
+    
+    -- Badges de Plan para Usuarios
+    ('pro_member', 'Usuario con plan Pro', 'user', 'plan',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/gem.svg',
+     '{"type": "subscription", "plan": "Pro"}', true),
+    
+    ('store_owner', 'Usuario con plan Tienda', 'user', 'plan',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/store.svg',
+     '{"type": "subscription", "plan": "Tienda"}', true),
+    
+    -- Badges de Volumen para Tiendas
+    ('rising_store', 'Más de 100 ventas completadas', 'store', 'volume',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/arrow-trend-up.svg',
+     '{"type": "sales", "count": 100, "period": "all_time"}', true),
+    
+    ('popular_store', 'Más de 500 ventas completadas', 'store', 'volume',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/fire.svg',
+     '{"type": "sales", "count": 500, "period": "all_time"}', true),
+    
+    -- Badges de Calidad para Tiendas
+    ('top_rated', 'Rating promedio superior a 4.8', 'store', 'quality',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/trophy.svg',
+     '{"type": "rating", "min_average": 4.8, "min_ratings": 20}', true),
+    
+    ('active_store', 'Más de 50 ventas activas', 'store', 'quality',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/bolt.svg',
+     '{"type": "active_sales", "count": 50}', true),
+    
+    -- Badges de Especialidad para Tiendas
+    ('pokemon_expert', 'Especialista en Pokémon', 'store', 'specialty',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/pokeball.svg',
+     '{"type": "category_sales", "category": "pokemon", "percentage": 70}', true),
+    
+    ('yugioh_expert', 'Especialista en Yu-Gi-Oh!', 'store', 'specialty',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/wand-sparkles.svg',
+     '{"type": "category_sales", "category": "yu-gi-oh", "percentage": 70}', true),
+    
+    ('magic_expert', 'Especialista en Magic', 'store', 'specialty',
+     'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/wand-magic-sparkles.svg',
+     '{"type": "category_sales", "category": "magic-the-gathering", "percentage": 70}', true)
+ON CONFLICT (name) DO UPDATE 
+SET description = EXCLUDED.description,
+    type = EXCLUDED.type,
+    category = EXCLUDED.category,
+    icon_url = EXCLUDED.icon_url,
+    criteria = EXCLUDED.criteria,
+    is_active = EXCLUDED.is_active,
+    updated_at = now();

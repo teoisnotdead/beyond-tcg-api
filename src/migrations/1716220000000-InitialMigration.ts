@@ -308,9 +308,130 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     await queryRunner.query(`
       UPDATE users SET current_subscription_id = '${adminSub[0].id}' WHERE id = '${adminUser[0].id}';
     `);
+
+    // --- BADGES SYSTEM ---
+    // Crear tabla Badges
+    await queryRunner.query(`
+      CREATE TABLE badges (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(50) NOT NULL UNIQUE,
+        description TEXT NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK (type IN ('user', 'store')),
+        category VARCHAR(20) NOT NULL CHECK (category IN ('level', 'reputation', 'plan', 'volume', 'quality', 'specialty')),
+        icon_url VARCHAR(255) NOT NULL,
+        criteria JSONB NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT now(),
+        updated_at TIMESTAMP DEFAULT now()
+      )
+    `);
+    // Crear tabla UserBadges
+    await queryRunner.query(`
+      CREATE TABLE userbadges (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
+        awarded_at TIMESTAMP DEFAULT now(),
+        expires_at TIMESTAMP,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT now(),
+        updated_at TIMESTAMP DEFAULT now(),
+        UNIQUE(user_id, badge_id)
+      )
+    `);
+    // Crear tabla StoreBadges
+    await queryRunner.query(`
+      CREATE TABLE storebadges (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
+        badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
+        awarded_at TIMESTAMP DEFAULT now(),
+        expires_at TIMESTAMP,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT now(),
+        updated_at TIMESTAMP DEFAULT now(),
+        UNIQUE(store_id, badge_id)
+      )
+    `);
+    // Crear índices para badges
+    await queryRunner.query(`CREATE INDEX idx_badges_type ON badges(type)`);
+    await queryRunner.query(`CREATE INDEX idx_badges_category ON badges(category)`);
+    await queryRunner.query(`CREATE INDEX idx_badges_is_active ON badges(is_active)`);
+    await queryRunner.query(`CREATE INDEX idx_userbadges_user_id ON userbadges(user_id)`);
+    await queryRunner.query(`CREATE INDEX idx_userbadges_badge_id ON userbadges(badge_id)`);
+    await queryRunner.query(`CREATE INDEX idx_userbadges_expires_at ON userbadges(expires_at)`);
+    await queryRunner.query(`CREATE INDEX idx_storebadges_store_id ON storebadges(store_id)`);
+    await queryRunner.query(`CREATE INDEX idx_storebadges_badge_id ON storebadges(badge_id)`);
+    await queryRunner.query(`CREATE INDEX idx_storebadges_expires_at ON storebadges(expires_at)`);
+    // Insertar datos iniciales de badges
+    await queryRunner.query(`
+      INSERT INTO badges (name, description, type, category, icon_url, criteria, is_active) VALUES
+        ('rookie', 'Primeras ventas/compras completadas', 'user', 'level', 
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/seedling.svg',
+         '{"type": "transactions", "count": 5, "period": "all_time"}', true),
+        ('experienced', 'Más de 50 transacciones completadas', 'user', 'level',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/star.svg',
+         '{"type": "transactions", "count": 50, "period": "all_time"}', true),
+        ('expert', 'Más de 200 transacciones completadas', 'user', 'level',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/crown.svg',
+         '{"type": "transactions", "count": 200, "period": "all_time"}', true),
+        ('trusted_seller', 'Rating promedio superior a 4.5', 'user', 'reputation',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/shield-check.svg',
+         '{"type": "rating", "min_average": 4.5, "min_ratings": 10}', true),
+        ('fast_shipper', 'Envíos confirmados en menos de 48h', 'user', 'reputation',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/truck-fast.svg',
+         '{"type": "shipping_time", "max_hours": 48, "min_sales": 5}', true),
+        ('pro_member', 'Usuario con plan Pro', 'user', 'plan',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/gem.svg',
+         '{"type": "subscription", "plan": "Pro"}', true),
+        ('store_owner', 'Usuario con plan Tienda', 'user', 'plan',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/store.svg',
+         '{"type": "subscription", "plan": "Tienda"}', true),
+        ('rising_store', 'Más de 100 ventas completadas', 'store', 'volume',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/arrow-trend-up.svg',
+         '{"type": "sales", "count": 100, "period": "all_time"}', true),
+        ('popular_store', 'Más de 500 ventas completadas', 'store', 'volume',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/fire.svg',
+         '{"type": "sales", "count": 500, "period": "all_time"}', true),
+        ('top_rated', 'Rating promedio superior a 4.8', 'store', 'quality',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/trophy.svg',
+         '{"type": "rating", "min_average": 4.8, "min_ratings": 20}', true),
+        ('active_store', 'Más de 50 ventas activas', 'store', 'quality',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/bolt.svg',
+         '{"type": "active_sales", "count": 50}', true),
+        ('pokemon_expert', 'Especialista en Pokémon', 'store', 'specialty',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/pokeball.svg',
+         '{"type": "category_sales", "category": "pokemon", "percentage": 70}', true),
+        ('yugioh_expert', 'Especialista en Yu-Gi-Oh!', 'store', 'specialty',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/wand-sparkles.svg',
+         '{"type": "category_sales", "category": "yu-gi-oh", "percentage": 70}', true),
+        ('magic_expert', 'Especialista en Magic', 'store', 'specialty',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/wand-magic-sparkles.svg',
+         '{"type": "category_sales", "category": "magic-the-gathering", "percentage": 70}', true)
+      ON CONFLICT (name) DO UPDATE 
+      SET description = EXCLUDED.description,
+          type = EXCLUDED.type,
+          category = EXCLUDED.category,
+          icon_url = EXCLUDED.icon_url,
+          criteria = EXCLUDED.criteria,
+          is_active = EXCLUDED.is_active,
+          updated_at = now()
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Aquí irían los DROP TABLE y DROP INDEX en orden inverso
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_storebadges_expires_at`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_storebadges_badge_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_storebadges_store_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_userbadges_expires_at`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_userbadges_badge_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_userbadges_user_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_badges_is_active`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_badges_category`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_badges_type`);
+    await queryRunner.query(`DROP TABLE IF EXISTS storebadges`);
+    await queryRunner.query(`DROP TABLE IF EXISTS userbadges`);
+    await queryRunner.query(`DROP TABLE IF EXISTS badges`);
   }
 } 

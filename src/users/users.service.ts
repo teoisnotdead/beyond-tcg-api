@@ -11,6 +11,8 @@ import { EnvConfig } from 'src/config/env.config';
 import { Sale } from '../sales/entities/sale.entity';
 import { Purchase } from '../purchases/entities/purchase.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserRegisteredEvent } from '../badges/badges.events';
 
 @Injectable()
 export class UsersService {
@@ -27,6 +29,7 @@ export class UsersService {
     private purchasesRepository: Repository<Purchase>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -65,6 +68,9 @@ export class UsersService {
       savedUser.current_subscription_id = userSubscription.id;
       await this.usersRepository.save(savedUser);
     }
+
+    // Emit event for badge assignment
+    this.eventEmitter.emit('user.registered', new UserRegisteredEvent(savedUser.id));
 
     return savedUser;
   }

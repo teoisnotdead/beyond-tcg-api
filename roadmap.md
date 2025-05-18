@@ -32,7 +32,7 @@
 ## 5. Reputación, Badges y Destacados
 - ✅ Implementar sistema de reputación para usuarios y tiendas (ratings por transacción, validaciones y promedio)
 - ✅ Implementar endpoints y lógica para destacados en home (usuarios y tiendas)
-- ⬜ Implementar sistema de badges (insignias) para usuarios y tiendas
+- ✅ Implementar sistema de badges (insignias) para usuarios y tiendas (estructura, endpoints, asignación automática y documentación)
 
 ## 6. Documentación y Finalización
 - ✅ Configurar Swagger para API docs

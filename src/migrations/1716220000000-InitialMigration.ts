@@ -210,16 +210,36 @@ export class InitialMigration1716220000000 implements MigrationInterface {
 
     // 2. Crear índices
     await queryRunner.query(`CREATE INDEX idx_users_email ON users(email);`);
-    await queryRunner.query(`CREATE INDEX idx_categories_slug ON categories(slug);`);
-    await queryRunner.query(`CREATE INDEX idx_categories_display_order ON categories(display_order);`);
-    await queryRunner.query(`CREATE INDEX idx_languages_slug ON languages(slug);`);
-    await queryRunner.query(`CREATE INDEX idx_languages_display_order ON languages(display_order);`);
-    await queryRunner.query(`CREATE INDEX idx_notifications_user_id ON notifications(user_id);`);
-    await queryRunner.query(`CREATE INDEX idx_notifications_is_read ON notifications(is_read);`);
-    await queryRunner.query(`CREATE INDEX idx_notifications_created_at ON notifications(created_at);`);
-    await queryRunner.query(`CREATE INDEX idx_usersubscriptions_user_id ON usersubscriptions(user_id);`);
-    await queryRunner.query(`CREATE INDEX idx_usersubscriptions_end_date ON usersubscriptions(end_date);`);
-    await queryRunner.query(`CREATE INDEX idx_usersubscriptions_is_active ON usersubscriptions(is_active);`);
+    await queryRunner.query(
+      `CREATE INDEX idx_categories_slug ON categories(slug);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_categories_display_order ON categories(display_order);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_languages_slug ON languages(slug);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_languages_display_order ON languages(display_order);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_notifications_user_id ON notifications(user_id);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_notifications_is_read ON notifications(is_read);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_notifications_created_at ON notifications(created_at);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_usersubscriptions_user_id ON usersubscriptions(user_id);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_usersubscriptions_end_date ON usersubscriptions(end_date);`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_usersubscriptions_is_active ON usersubscriptions(is_active);`,
+    );
 
     // 3. Insertar datos iniciales
     await queryRunner.query(`
@@ -285,8 +305,12 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     `);
 
     // Obtener el id del usuario admin y del plan Free
-    const adminUser = await queryRunner.query(`SELECT id FROM users WHERE email = 'admin@beyondtcg.cl' LIMIT 1;`);
-    const freePlan = await queryRunner.query(`SELECT id FROM subscriptionplans WHERE name = 'Free' LIMIT 1;`);
+    const adminUser = await queryRunner.query(
+      `SELECT id FROM users WHERE email = 'admin@beyondtcg.cl' LIMIT 1;`,
+    );
+    const freePlan = await queryRunner.query(
+      `SELECT id FROM subscriptionplans WHERE name = 'Free' LIMIT 1;`,
+    );
 
     // Crear la suscripción del admin
     await queryRunner.query(`
@@ -304,7 +328,9 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     `);
 
     // Actualizar el usuario admin con la suscripción creada
-    const adminSub = await queryRunner.query(`SELECT id FROM usersubscriptions WHERE user_id = '${adminUser[0].id}' AND plan_id = '${freePlan[0].id}' LIMIT 1;`);
+    const adminSub = await queryRunner.query(
+      `SELECT id FROM usersubscriptions WHERE user_id = '${adminUser[0].id}' AND plan_id = '${freePlan[0].id}' LIMIT 1;`,
+    );
     await queryRunner.query(`
       UPDATE users SET current_subscription_id = '${adminSub[0].id}' WHERE id = '${adminUser[0].id}';
     `);
@@ -355,18 +381,43 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     `);
     // Crear índices para badges
     await queryRunner.query(`CREATE INDEX idx_badges_type ON badges(type)`);
-    await queryRunner.query(`CREATE INDEX idx_badges_category ON badges(category)`);
-    await queryRunner.query(`CREATE INDEX idx_badges_is_active ON badges(is_active)`);
-    await queryRunner.query(`CREATE INDEX idx_userbadges_user_id ON userbadges(user_id)`);
-    await queryRunner.query(`CREATE INDEX idx_userbadges_badge_id ON userbadges(badge_id)`);
-    await queryRunner.query(`CREATE INDEX idx_userbadges_expires_at ON userbadges(expires_at)`);
-    await queryRunner.query(`CREATE INDEX idx_storebadges_store_id ON storebadges(store_id)`);
-    await queryRunner.query(`CREATE INDEX idx_storebadges_badge_id ON storebadges(badge_id)`);
-    await queryRunner.query(`CREATE INDEX idx_storebadges_expires_at ON storebadges(expires_at)`);
+    await queryRunner.query(
+      `CREATE INDEX idx_badges_category ON badges(category)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_badges_is_active ON badges(is_active)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_userbadges_user_id ON userbadges(user_id)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_userbadges_badge_id ON userbadges(badge_id)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_userbadges_expires_at ON userbadges(expires_at)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_storebadges_store_id ON storebadges(store_id)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_storebadges_badge_id ON storebadges(badge_id)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX idx_storebadges_expires_at ON storebadges(expires_at)`,
+    );
     // Insertar datos iniciales de badges
     await queryRunner.query(`
       INSERT INTO badges (name, description, type, category, icon_url, criteria, is_active) VALUES
-        ('rookie', 'Primeras ventas/compras completadas', 'user', 'level', 
+        ('welcome', '¡Bienvenido a bordo!', 'user', 'level',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/user-plus.svg',
+         '{"type": "register"}', true),
+        ('upgrade_pro', '¡Has mejorado a Pro!', 'user', 'plan',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/arrow-up.svg',
+         '{"type": "subscription_upgrade", "plan": "Pro"}', true),
+        ('upgrade_store', '¡Ahora eres dueño de una tienda!', 'user', 'plan',
+         'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/store.svg',
+         '{"type": "subscription_upgrade", "plan": "Store"}', true),
+        ('rookie', 'Primeras ventas/compras completadas', 'user', 'level',
          'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/seedling.svg',
          '{"type": "transactions", "count": 5, "period": "all_time"}', true),
         ('experienced', 'Más de 50 transacciones completadas', 'user', 'level',
@@ -408,14 +459,14 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         ('magic_expert', 'Especialista en Magic', 'store', 'specialty',
          'https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@6.4.0/svgs/solid/wand-magic-sparkles.svg',
          '{"type": "category_sales", "category": "magic-the-gathering", "percentage": 70}', true)
-      ON CONFLICT (name) DO UPDATE 
+      ON CONFLICT (name) DO UPDATE
       SET description = EXCLUDED.description,
           type = EXCLUDED.type,
           category = EXCLUDED.category,
           icon_url = EXCLUDED.icon_url,
           criteria = EXCLUDED.criteria,
           is_active = EXCLUDED.is_active,
-          updated_at = now()
+          updated_at = now();
     `);
   }
 
@@ -434,4 +485,4 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS userbadges`);
     await queryRunner.query(`DROP TABLE IF EXISTS badges`);
   }
-} 
+}

@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
 import { UsersService } from '../users/users.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserSubscriptionChangedEvent } from '../badges/badges.events';
 
 @Injectable()
 export class SubscriptionsService {
@@ -13,6 +15,7 @@ export class SubscriptionsService {
     @InjectRepository(UserSubscription)
     private userSubscriptionsRepository: Repository<UserSubscription>,
     private usersService: UsersService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async getCurrentSubscription(userId: string) {
@@ -74,6 +77,9 @@ export class SubscriptionsService {
     // Update user with new subscription
     user.current_subscription_id = newSubscription.id;
     await this.usersService.update(userId, { current_subscription_id: newSubscription.id });
+
+    // Emit event for badge assignment
+    this.eventEmitter.emit('user.subscriptionChanged', new UserSubscriptionChangedEvent(userId, plan.name));
 
     return newSubscription;
   }

@@ -25,6 +25,8 @@ import { PurchasesModule } from './purchases/purchases.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { CommentsModule } from './comments/comments.module';
 import { StoresModule } from './stores/stores.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/entities/notification.entity';
 
 @Module({
   imports: [
@@ -53,6 +55,7 @@ import { StoresModule } from './stores/stores.module';
           Sale,
           StoreSocialLink,
           Favorite,
+          Notification,
         ],
         synchronize: configService.get('environment') !== 'production',
       }),
@@ -69,7 +72,8 @@ import { StoresModule } from './stores/stores.module';
     StoresModule,
     PurchasesModule,
     RatingsModule,
-    CommentsModule
+    CommentsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

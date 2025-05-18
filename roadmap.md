@@ -1,49 +1,54 @@
-# 🗺️ Roadmap de Desarrollo
+# 🗺️ Development Roadmap
 
-## 1. Configuración Inicial
-- ✅ Crear archivo .env con variables esenciales
-- ✅ Instalar dependencias faltantes
-- ✅ Configurar TypeORM para PostgreSQL
-- ✅ Implementar sistema de migraciones y datos iniciales
+## 1. Initial Setup
+- ✅ Create .env file with essential variables
+- ✅ Install missing dependencies
+- ✅ Configure TypeORM for PostgreSQL
+- ✅ Implement migrations and initial data
 
-## 2. Módulos Básicos
-- ✅ Crear estructura de carpetas para módulos
-- ✅ Implementar módulo de autenticación
-- ✅ Configurar middleware de JWT
-- ✅ Implementar módulo de usuarios
+## 2. Basic Modules
+- ✅ Create folder structure for modules
+- ✅ Implement authentication module
+- ✅ Configure JWT middleware
+- ✅ Implement users module
 
-## 3. Funcionalidades Core
-- ✅ Implementar OAuth2 con Google
-- ✅ Configurar Cloudinary para imágenes
-- ✅ Implementar sistema de suscripciones con planes escalonados (Free, Pro, Tienda)
-  - ✅ Lógica de límites de ventas por plan
-  - ✅ Validación de creación de tienda según plan
-  - ✅ Branding, estadísticas y destacados según plan (estructura y features en migración)
-- ✅ Configurar WebSockets para notificaciones
+## 3. Core Features
+- ✅ Implement OAuth2 with Google
+- ✅ Configure Cloudinary for images
+- ✅ Implement subscription system with tiered plans (Free, Pro, Store)
+  - ✅ Sales limits logic per plan
+  - ✅ Store creation validation by plan
+  - ✅ Branding, statistics, and featured logic by plan (structure and features in migration)
+- ✅ Configure WebSockets for notifications
+- ✅ Refactor notifications for internationalization (i18n) and metadata handling
+- ✅ Standardize API responses (global interceptor)
+- ✅ Advanced header and environment validation
 
-## 4. Módulos de Entidades
-- ✅ Implementar módulos para tiendas (stores)
-- ✅ Implementar módulos para ventas
-- ✅ Implementar módulos para compras
-- ✅ Implementar módulos para categorías/idiomas
-- ✅ Implementar módulos para comentarios
-- ✅ Implementar módulo de favoritos
-- ✅ Implementar paginación flexible y filtros avanzados en endpoints principales
-- ✅ Implementar endpoints de búsqueda avanzada (texto libre, filtros, paginación)
+## 4. Entity Modules
+- ✅ Implement stores module
+- ✅ Implement sales module
+- ✅ Implement purchases module
+- ✅ Implement categories/languages modules
+- ✅ Implement comments module
+- ✅ Implement favorites module
+- ✅ Implement flexible pagination and advanced filters in main endpoints
+- ✅ Implement advanced search endpoints (free text, filters, pagination)
 
-## 5. Reputación, Badges y Destacados
-- ✅ Implementar sistema de reputación para usuarios y tiendas (ratings por transacción, validaciones y promedio)
-- ✅ Implementar endpoints y lógica para destacados en home (usuarios y tiendas)
-- ✅ Implementar sistema de badges (insignias) para usuarios y tiendas (estructura, endpoints, asignación automática y documentación)
+## 5. Reputation, Badges, and Featured
+- ✅ Implement reputation system for users and stores (transaction ratings, validations, and averages)
+- ✅ Implement endpoints and logic for featured users and stores on home
+- ✅ Implement badges system for users and stores (structure, endpoints, automatic assignment, and documentation)
 
-## 6. Documentación y Finalización
-- ✅ Configurar Swagger para API docs
-- ✅ Implementar validaciones
-- ✅ Configurar tareas programadas (cron jobs, expiración de suscripciones, etc.)
-- ⬜ Testing y optimización
-  - ⬜ Tests unitarios
-  - ⬜ Tests e2e
-  - ✅ Optimización de queries
-  - ⬜ Implementación de cache
-  - ✅ Mejora en manejo de errores
-  - ⬜ Documentación adicional de endpoints
+## 6. Documentation and Finalization
+- ✅ Configure Swagger for API docs
+- ✅ Implement validations
+- ✅ Configure scheduled tasks (cron jobs, subscription expiration, etc.)
+- ✅ Error handling improvements
+- ✅ Refactor notifications for i18n and metadata
+- ✅ API response standardization
+- ⬜ Testing and optimization
+  - ⬜ Unit tests
+  - ⬜ E2E tests
+  - ✅ Query optimization
+  - ⬜ Cache implementation
+  - ⬜ Additional endpoint documentation

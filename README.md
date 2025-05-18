@@ -108,7 +108,7 @@ Complete API documentation is available through Swagger UI at `/api/docs` when t
 
 ## Project Status
 
-The project is under active development. Check the [Roadmap](roadmap.md) for current feature status and upcoming implementations.
+The project is under active development. Check the [Roadmap[EN]](roadmap.md), [Roadmap[ES]](roadmap.es.md) and [Changelog](CHANGELOG.md) for more information.
 
 ## License
 

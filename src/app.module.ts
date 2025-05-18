@@ -30,6 +30,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { FeaturedModule } from './featured/featured.module';
 import { HeadersModule } from './common/headers/headers.module';
+import { APP_FILTER } from '@nestjs/core';
+import { GlobalHttpExceptionFilter } from './common/http-exception.filter';
 
 @Module({
   imports: [
@@ -80,6 +82,9 @@ import { HeadersModule } from './common/headers/headers.module';
     NotificationsModule,
     FeaturedModule,
     HeadersModule,
+  ],
+  providers: [
+    { provide: APP_FILTER, useClass: GlobalHttpExceptionFilter },
   ],
 })
 export class AppModule {}

@@ -34,11 +34,11 @@ export class Notification {
   })
   type: NotificationType;
 
-  @Column()
-  title: string;
+  @Column({ nullable: true })
+  title?: string;
 
-  @Column('text')
-  message: string;
+  @Column('text', { nullable: true })
+  message?: string;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: any;

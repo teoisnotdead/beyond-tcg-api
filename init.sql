@@ -165,15 +165,13 @@ CREATE TABLE Favorites (
     UNIQUE(user_id, sale_id)
 );
 
-CREATE TABLE Notifications (
+CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES Users(id) ON DELETE CASCADE,
-    type VARCHAR(50) NOT NULL, -- 'comment', 'purchase', 'rating', 'system', etc.
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
     is_read BOOLEAN DEFAULT false,
-    related_entity_id UUID, -- ID de la entidad relacionada (sale_id, comment_id, etc.)
-    related_entity_type VARCHAR(50), -- Tipo de entidad relacionada ('sale', 'comment', etc.)
+    related_entity_id UUID,
+    related_entity_type VARCHAR(50),
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
 );

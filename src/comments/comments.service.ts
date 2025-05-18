@@ -1,10 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 import { CommentSubscription } from './entities/comment-subscription.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
-import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 
@@ -40,12 +39,10 @@ export class CommentsService {
         .getOne();
 
       if (sale?.sale?.seller?.id) {
-        // Notificar al vendedor
+        // Notify the seller (only type and metadata, no title/message)
         await this.notificationsService.create({
           user_id: sale.sale.seller.id,
           type: NotificationType.COMMENT_RECEIVED,
-          title: 'Nuevo comentario en tu venta',
-          message: `Has received a new comment on your sale`,
           metadata: {
             comment_id: savedComment.id,
             sale_id: createCommentDto.sale_id,
@@ -53,10 +50,10 @@ export class CommentsService {
           }
         });
 
-        // Suscribir automáticamente al usuario que comentó
+        // Auto-subscribe the user who commented
         await this.subscribeToSaleComments(userId, createCommentDto.sale_id);
 
-        // Notificar a todos los suscriptores excepto al que comentó
+        // Notify all subscribers except the commenter
         const subscribers = await this.subscriptionRepository.find({
           where: { sale: { id: createCommentDto.sale_id } },
           relations: ['user']
@@ -67,8 +64,6 @@ export class CommentsService {
             await this.notificationsService.create({
               user_id: subscriber.user.id,
               type: NotificationType.COMMENT_RECEIVED,
-              title: 'Nuevo comentario en una venta que sigues',
-              message: `Hay un nuevo comentario en una venta que sigues`,
               metadata: {
                 comment_id: savedComment.id,
                 sale_id: createCommentDto.sale_id,

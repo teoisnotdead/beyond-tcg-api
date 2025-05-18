@@ -16,8 +16,6 @@ export class NotificationsService {
   async create(data: {
     user_id: string;
     type: NotificationType;
-    title: string;
-    message: string;
     metadata?: any;
   }): Promise<Notification> {
     const notification = this.notificationsRepository.create(data);

@@ -198,8 +198,6 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         type VARCHAR(50) NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
         is_read BOOLEAN DEFAULT false,
         related_entity_id UUID,
         related_entity_type VARCHAR(50),

@@ -33,12 +33,10 @@ export class FavoritesService {
       .getOne();
 
     if (sale?.sale?.seller?.id) {
-      // Notificar al vendedor
+      // Notify the seller (only type and metadata, no title/message)
       await this.notificationsService.create({
         user_id: sale.sale.seller.id,
         type: NotificationType.FAVORITE_ADDED,
-        title: 'New favorite sale',
-        message: 'Someone has marked your sale as favorite',
         metadata: {
           favorite_id: savedFavorite.id,
           sale_id: createFavoriteDto.sale_id,

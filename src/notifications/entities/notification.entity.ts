@@ -11,7 +11,8 @@ export enum NotificationType {
   COMMENT_RECEIVED = 'comment_received',
   SUBSCRIPTION_EXPIRING = 'subscription_expiring',
   SUBSCRIPTION_EXPIRED = 'subscription_expired',
-  SYSTEM_NOTIFICATION = 'system_notification'
+  SYSTEM_NOTIFICATION = 'system_notification',
+  FAVORITE_ADDED = 'favorite_added'
 }
 
 @Entity('notifications')

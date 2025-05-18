@@ -29,6 +29,7 @@ import { StoresModule } from './stores/stores.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { FeaturedModule } from './featured/featured.module';
+import { HeadersModule } from './common/headers/headers.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { FeaturedModule } from './featured/featured.module';
     CommentsModule,
     NotificationsModule,
     FeaturedModule,
+    HeadersModule,
   ],
 })
 export class AppModule {}

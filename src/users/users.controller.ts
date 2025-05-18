@@ -9,6 +9,7 @@ import { Role } from '../common/enums/roles.enum';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CommentsService } from '../comments/comments.service';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
+import { Platform, UserRole, SubscriptionTier, Channel } from '../common/headers/decorators/headers.decorator';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -109,5 +110,34 @@ export class UsersController {
   async searchUsers(@Request() req) {
     const { search, page = 1, limit = 20, offset, roles } = req.query;
     return this.usersService.searchUsers({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, roles });
+  }
+
+  @Get('profile/metadata')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get user profile metadata with headers information' })
+  @ApiResponse({ status: 200, description: 'User profile metadata retrieved successfully.' })
+  async getProfileMetadata(
+    @Request() req,
+    @Platform() platform: string,
+    @UserRole() role: string,
+    @SubscriptionTier() tier: string,
+    @Channel() channel: string,
+  ) {
+    const user = await this.usersService.findOne(req.user.id);
+    
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+      metadata: {
+        platform,
+        role,
+        tier,
+        channel,
+        requestTimestamp: new Date().toISOString(),
+      },
+    };
   }
 }

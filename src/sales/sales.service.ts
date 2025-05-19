@@ -7,6 +7,29 @@ import { PurchasesService } from '../purchases/purchases.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 
+export interface SaleListItem {
+  id: string;
+  seller: { id: string };
+  store_id?: string | null;
+  name: string;
+  description: string;
+  price: string | number;
+  image_url?: string | null;
+  quantity: number;
+  status: string;
+  views: number;
+  category: { id: string } | null;
+  language: { id: string } | null;
+  shipping_proof_url?: string | null;
+  delivery_proof_url?: string | null;
+  reserved_at?: Date | null;
+  shipped_at?: Date | null;
+  delivered_at?: Date | null;
+  completed_at?: Date | null;
+  cancelled_at?: Date | null;
+  created_at: Date;
+}
+
 @Injectable()
 export class SalesService {
   constructor(
@@ -52,15 +75,56 @@ export class SalesService {
     }
   }
 
-  async findAll(page: number = 1, limit: number = 20, filters: Partial<Sale> = {}): Promise<{ data: Sale[]; total: number; page: number; totalPages: number }> {
-    const [data, total] = await this.salesRepository.findAndCount({
-      where: filters,
-      relations: ['seller', 'category', 'language'],
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+  async findAll(
+    page: number = 1,
+    limit: number = 20,
+    filters: any = {}
+  ): Promise<{ data: SaleListItem[]; total: number; page: number; totalPages: number }> {
+    let skip = (page - 1) * limit;
+
+    const qb = this.salesRepository.createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.seller', 'seller')
+      .leftJoinAndSelect('sale.category', 'category')
+      .leftJoinAndSelect('sale.language', 'language')
+      .andWhere('sale.status = :status', { status: 'available' });
+
+    // Filter by category
+    if (filters.categories) {
+      const categoryIds = Array.isArray(filters.categories)
+        ? filters.categories
+        : filters.categories.split(',');
+      qb.andWhere('sale.category_id IN (:...categoryIds)', { categoryIds });
+    }
+
+    // Filter by language
+    if (filters.language_id) {
+      const languageIds = Array.isArray(filters.language_id)
+        ? filters.language_id
+        : filters.language_id.split(',');
+      qb.andWhere('sale.language_id IN (:...languageIds)', { languageIds });
+    }
+
+    // Filter by search text
+    if (filters.search) {
+      qb.andWhere(`(
+        sale.name ILIKE :search OR
+        sale.description ILIKE :search
+      )`, { search: `%${filters.search}%` });
+    }
+
+    qb.orderBy('sale.created_at', 'DESC')
+      .skip(skip)
+      .take(Number(limit));
+
+    const [sales, total] = await qb.getManyAndCount();
+
     return {
-      data,
+      data: sales.map(sale => ({
+        ...sale,
+        seller: { id: sale.seller.id },
+        category: sale.category ? { id: sale.category.id } : null,
+        language: sale.language ? { id: sale.language.id } : null,
+      })),
       total,
       page,
       totalPages: Math.ceil(total / limit),
@@ -141,7 +205,7 @@ export class SalesService {
     return { message: 'Sale cancelled' };
   }
 
-  async searchSales({ search, page = 1, limit = 20, offset, categories }: { search?: string; page?: number; limit?: number; offset?: number; categories?: string | string[] }) {
+  async searchSales({ search, page = 1, limit = 20, offset, categories }: { search?: string; page?: number; limit?: number; offset?: number; categories?: string | string[] }): Promise<{ sales: SaleListItem[]; totalPages: number; currentPage: number; total: number }> {
     // Calculate offset
     let skip = 0;
     if (typeof offset !== 'undefined') {
@@ -163,7 +227,7 @@ export class SalesService {
       .leftJoinAndSelect('sale.seller', 'seller')
       .leftJoinAndSelect('sale.category', 'category')
       .leftJoinAndSelect('sale.language', 'language')
-      .where('sale.status = :status', { status: 'available' });
+      .andWhere('sale.status = :status', { status: 'available' });
     if (categoryIds && categoryIds.length > 0) {
       qb.andWhere('sale.category_id IN (:...categoryIds)', { categoryIds });
     }
@@ -179,7 +243,12 @@ export class SalesService {
       .take(Number(limit));
     const [sales, total] = await qb.getManyAndCount();
     return {
-      sales,
+      sales: sales.map(sale => ({
+        ...sale,
+        seller: { id: sale.seller.id },
+        category: sale.category ? { id: sale.category.id } : null,
+        language: sale.language ? { id: sale.language.id } : null,
+      })),
       totalPages: Math.ceil(total / Number(limit)),
       currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
       total

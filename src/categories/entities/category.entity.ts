@@ -14,10 +14,10 @@ export class Category {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ default: 0 })
+  @Column({ name: 'display_order', default: 0 })
   displayOrder: number;
 
   @CreateDateColumn({ name: 'created_at' })

@@ -18,15 +18,16 @@
 - ✅ Get user profile metadata (GET `/api/users/profile/metadata`)
 
 ## 2. Sales
-- [ ] Create sale (POST `/api/sales`)
-- [ ] List active sales (GET `/api/sales/active`)
-- [ ] Search sales with filters and pagination (GET `/api/sales?search=...&page=...`)
-- [ ] Get sale details (GET `/api/sales/:id`)
+- ✅ Create sale (POST `/api/sales`)
+- ✅ List active sales (GET `/api/sales`)
+- ✅ Search sales with filters and pagination (GET `/api/sales?search=...&page=...`)
+- ✅ Get sale details (GET `/api/sales/:id`)
 - [ ] Reserve sale (POST `/api/sales/:id/reserve`)
 - [ ] Mark sale as shipped (POST `/api/sales/:id/ship`)
 - [ ] Confirm sale delivery (POST `/api/sales/:id/confirm-delivery`)
 - [ ] Cancel sale (POST `/api/sales/:id/cancel`)
-- [ ] Delete sale (DELETE `/api/sales/:id`)
+- ✅ Delete sale (DELETE `/api/sales/:id`)
+- ✅ Update sale (PATCH `/api/sales/:id`)
 
 ## 3. Purchases
 - [ ] Make a purchase (POST `/api/purchases`)

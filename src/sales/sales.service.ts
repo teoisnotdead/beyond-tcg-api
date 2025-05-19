@@ -5,6 +5,7 @@ import { Sale } from './entities/sale.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { PurchasesService } from '../purchases/purchases.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { UpdateSaleDto } from './dto/update-sale.dto';
 
 @Injectable()
 export class SalesService {
@@ -185,7 +186,7 @@ export class SalesService {
     };
   }
 
-  async update(saleId: string, userId: string, updateSaleDto: any, image?: Express.Multer.File): Promise<Sale> {
+  async update(saleId: string, userId: string, updateSaleDto: UpdateSaleDto, image?: Express.Multer.File): Promise<any> {
     const sale = await this.salesRepository.findOne({ where: { id: saleId }, relations: ['seller'] });
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id !== userId) throw new ForbiddenException('You are not the seller of this sale');
@@ -200,7 +201,11 @@ export class SalesService {
         updateSaleDto.image_url = uploadedImageResult.secure_url;
       }
       Object.assign(sale, updateSaleDto);
-      return await this.salesRepository.save(sale);
+      const savedSale = await this.salesRepository.save(sale);
+      return {
+        ...savedSale,
+        seller: { id: savedSale.seller.id },
+      };
     } catch (error) {
       if (uploadedImageResult && uploadedImageResult.public_id) {
         await this.cloudinaryService.deleteImage(uploadedImageResult.public_id);

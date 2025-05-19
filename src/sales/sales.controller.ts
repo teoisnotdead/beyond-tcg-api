@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -6,6 +6,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 import { CommentsService } from '../comments/comments.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateSaleDto } from './dto/update-sale.dto';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -23,14 +25,19 @@ export class SalesController {
   ) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Create a new sale' })
   @ApiResponse({ status: 201, description: 'Sale created successfully.' })
-  async create(@Request() req: AuthRequest, @Body() createSaleDto: CreateSaleDto) {
+  async create(
+    @Request() req: AuthRequest,
+    @Body() createSaleDto: CreateSaleDto,
+    @UploadedFile() image: Express.Multer.File
+  ) {
     const canCreate = await this.subscriptionValidationService.canCreateSale(req.user.id);
     if (!canCreate) {
       throw new ForbiddenException('You have reached the limit of active sales according to your subscription plan.');
     }
-    return this.salesService.create(req.user.id, createSaleDto);
+    return this.salesService.create(req.user.id, createSaleDto, image);
   }
 
   @Get()
@@ -98,10 +105,24 @@ export class SalesController {
   }
 
   @Get('search')
-  @ApiOperation({ summary: 'Buscar ventas por término, categoría, paginación y offset' })
-  @ApiResponse({ status: 200, description: 'Ventas encontradas.' })
+  @ApiOperation({ summary: 'Search sales by term, category, pagination and offset' })
+  @ApiResponse({ status: 200, description: 'Sales found.' })
   async searchSales(@Request() req) {
     const { search, page = 1, limit = 20, offset, categories } = req.query;
     return this.salesService.searchSales({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, categories });
+  }
+
+  @Patch(':id')
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiOperation({ summary: 'Update a sale' })
+  @ApiResponse({ status: 200, description: 'Sale updated successfully.' })
+  async update(
+    @Param('id') id: string,
+    @Request() req: AuthRequest,
+    @Body() updateSaleDto: UpdateSaleDto,
+    @UploadedFile() image?: Express.Multer.File
+  ) {
+    // Aquí podrías validar que el usuario sea el vendedor
+    return this.salesService.update(id, req.user.id, updateSaleDto, image);
   }
 }

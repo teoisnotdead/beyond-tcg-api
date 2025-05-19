@@ -15,6 +15,7 @@ import { PurchasesModule } from '../purchases/purchases.module';
 import { FavoritesModule } from '../favorites/favorites.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AuthModule } from '../auth/auth.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -32,7 +33,8 @@ import { AuthModule } from '../auth/auth.module';
     forwardRef(() => PurchasesModule),
     forwardRef(() => FavoritesModule),
     forwardRef(() => SubscriptionsModule),
-    forwardRef(() => AuthModule)
+    forwardRef(() => AuthModule),
+    forwardRef(() => CloudinaryModule),
   ],
   controllers: [UsersController],
   providers: [UsersService],

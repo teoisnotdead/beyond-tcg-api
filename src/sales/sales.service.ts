@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sale } from './entities/sale.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { PurchasesService } from '../purchases/purchases.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class SalesService {
@@ -11,6 +12,8 @@ export class SalesService {
     @InjectRepository(Sale)
     private salesRepository: Repository<Sale>,
     private readonly purchasesService: PurchasesService,
+    @Inject(CloudinaryService)
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async countActiveSalesByUser(userId: string): Promise<number> {
@@ -22,14 +25,30 @@ export class SalesService {
     });
   }
 
-  async create(userId: string, createSaleDto: CreateSaleDto): Promise<Sale> {
-    // Create a new sale for the user
-    const sale = this.salesRepository.create({
-      ...createSaleDto,
-      seller: { id: userId },
-      status: createSaleDto.status || 'available',
-    });
-    return this.salesRepository.save(sale);
+  async create(userId: string, createSaleDto: CreateSaleDto, image?: Express.Multer.File): Promise<Sale> {
+    let imageUrl: string | undefined = undefined;
+    let uploadedImageResult: any = null;
+    try {
+      if (image) {
+        uploadedImageResult = await this.cloudinaryService.uploadImage(image, 'Beyond TCG/sales');
+        imageUrl = uploadedImageResult.secure_url;
+      }
+      const sale = this.salesRepository.create({
+        ...createSaleDto,
+        seller: { id: userId },
+        status: createSaleDto.status || 'available',
+        image_url: imageUrl,
+        category: { id: createSaleDto.category_id },
+        language: { id: createSaleDto.language_id },
+      });
+      return await this.salesRepository.save(sale);
+    } catch (error) {
+      // if the image was uploaded but the sale failed, delete the image from Cloudinary
+      if (uploadedImageResult && uploadedImageResult.public_id) {
+        await this.cloudinaryService.deleteImage(uploadedImageResult.public_id);
+      }
+      throw error;
+    }
   }
 
   async findAll(page: number = 1, limit: number = 20, filters: Partial<Sale> = {}): Promise<{ data: Sale[]; total: number; page: number; totalPages: number }> {
@@ -53,9 +72,9 @@ export class SalesService {
       relations: ['seller', 'category', 'language'],
     });
     if (!sale) {
-      throw new NotFoundException('No se encontró la venta solicitada');
+      throw new NotFoundException('Sale not found');
     }
-    // Incrementar vistas
+    // Increment views
     sale.views += 1;
     await this.salesRepository.save(sale);
     return sale;
@@ -122,14 +141,14 @@ export class SalesService {
   }
 
   async searchSales({ search, page = 1, limit = 20, offset, categories }: { search?: string; page?: number; limit?: number; offset?: number; categories?: string | string[] }) {
-    // Calcular offset
+    // Calculate offset
     let skip = 0;
     if (typeof offset !== 'undefined') {
       skip = Number(offset);
     } else {
       skip = (Number(page) - 1) * Number(limit);
     }
-    // Procesar categorías
+    // Process categories
     let categoryIds: string[] | undefined = undefined;
     if (categories) {
       if (Array.isArray(categories)) {
@@ -164,5 +183,29 @@ export class SalesService {
       currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),
       total
     };
+  }
+
+  async update(saleId: string, userId: string, updateSaleDto: any, image?: Express.Multer.File): Promise<Sale> {
+    const sale = await this.salesRepository.findOne({ where: { id: saleId }, relations: ['seller'] });
+    if (!sale) throw new NotFoundException('Sale not found');
+    if (sale.seller.id !== userId) throw new ForbiddenException('You are not the seller of this sale');
+    let uploadedImageResult: any = null;
+    try {
+      if (image) {
+        uploadedImageResult = await this.cloudinaryService.updateImage(
+          image,
+          sale.image_url || null,
+          'Beyond TCG/sales'
+        );
+        updateSaleDto.image_url = uploadedImageResult.secure_url;
+      }
+      Object.assign(sale, updateSaleDto);
+      return await this.salesRepository.save(sale);
+    } catch (error) {
+      if (uploadedImageResult && uploadedImageResult.public_id) {
+        await this.cloudinaryService.deleteImage(uploadedImageResult.public_id);
+      }
+      throw error;
+    }
   }
 }

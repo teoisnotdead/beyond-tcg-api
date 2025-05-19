@@ -1,14 +1,21 @@
 # 📝 Manual Test Checklist (Postman)
 
 ## 1. Authentication & Users
-- [ ] Register user (POST `/api/auth/register`)
-- [ ] Register user with google (POST `/api/auth/google`)
-- [ ] User login (POST `/api/auth/login`)
-- [ ] Google OAuth login (if applicable)
-- [ ] Get authenticated user profile (GET `/api/users/me`)
-- [ ] Update user data (PATCH `/api/users/:id`)
-- [ ] Delete user (DELETE `/api/users/:id`)
-- [ ] Validate access with and without JWT token
+- ✅ Register user (POST `/api/auth/register`)
+- ✅ Register user with google (POST `/api/auth/google`)
+- ✅ User login (POST `/api/auth/login`)
+- ✅ Google OAuth login (if applicable)
+- ✅ Get authenticated user profile (GET `/api/users/me`)
+- ✅ Update user data (PATCH `/api/users/:id`)
+- ✅ Delete user (DELETE `/api/users/:id`)
+- ✅ Validate access with and without JWT token
+- ✅ Get user by ID (GET `/api/users/:id`)
+- ✅ Get all users (GET `/api/users`)
+- ✅ Search users (GET `/api/users/search`)
+- ✅ Get user statistics (GET `/api/users/:id/statistics`)
+- ✅ Get comments for user (GET `/api/users/:id/comments`)
+- ✅ Get comments authored by user (GET `/api/users/:id/comments-authored`)
+- ✅ Get user profile metadata (GET `/api/users/profile/metadata`)
 
 ## 2. Sales
 - [ ] Create sale (POST `/api/sales`)
@@ -65,5 +72,5 @@
 - [ ] Test access to protected endpoints with invalid token (should return 401)
 
 ## 11. Responses & Errors
-- [ ] Verify all successful responses use the standard format (`success`, `message`, `data`)
-- [ ] Verify all errors use the standard format (`success: false`, `message`, `error`, `statusCode`) 
+- ✅ Verify all successful responses use the standard format (`success`, `message`, `data`)
+- ✅ Verify all errors use the standard format (`success: false`, `message`, `error`, `statusCode`) 

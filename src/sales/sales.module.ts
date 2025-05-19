@@ -7,7 +7,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PurchasesModule } from '../purchases/purchases.module';
 import { CommentsModule } from '../comments/comments.module';
 import { UsersModule } from '../users/users.module';
-
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sale]),
@@ -15,6 +15,7 @@ import { UsersModule } from '../users/users.module';
     forwardRef(() => PurchasesModule),
     forwardRef(() => UsersModule),
     CommentsModule,
+    CloudinaryModule,
   ],
   providers: [SalesService],
   controllers: [SalesController],

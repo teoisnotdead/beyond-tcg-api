@@ -13,6 +13,7 @@ import { Purchase } from '../purchases/entities/purchase.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRegisteredEvent } from '../badges/badges.events';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UsersService {
@@ -30,6 +31,7 @@ export class UsersService {
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
     private eventEmitter: EventEmitter2,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -105,14 +107,30 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, updateUserDto: UpdateUserDto, avatar?: Express.Multer.File): Promise<User> {
     const user = await this.findOne(id);
-    if (updateUserDto.password) {
-      const salt = await bcrypt.genSalt();
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    let uploadedImageResult: any = null;
+    try {
+      if (avatar) {
+        uploadedImageResult = await this.cloudinaryService.updateImage(
+          avatar,
+          user.avatar_url || null,
+          'Beyond TCG/avatars'
+        );
+        updateUserDto.avatar_url = uploadedImageResult.secure_url;
+      }
+      if (updateUserDto.password) {
+        const salt = await bcrypt.genSalt();
+        updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+      }
+      Object.assign(user, updateUserDto);
+      return this.usersRepository.save(user);
+    } catch (error) {
+      if (uploadedImageResult && uploadedImageResult.public_id) {
+        await this.cloudinaryService.deleteImage(uploadedImageResult.public_id);
+      }
+      throw error;
     }
-    Object.assign(user, updateUserDto);
-    return this.usersRepository.save(user);
   }
 
   async remove(id: string): Promise<{ message: string }> {

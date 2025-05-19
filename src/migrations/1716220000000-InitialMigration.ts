@@ -246,7 +246,7 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     await queryRunner.query(`
       INSERT INTO categories (name, slug, description, display_order) VALUES
       ('Digimon', 'digimon', 'Cartas coleccionables del juego Digimon Card Game', 1),
-      ('Dragon Ball Fusion', 'dragon-ball-fusion', 'Cartas del juego Dragon Ball Fusion World', 2),
+      ('Dragon Ball Fusion World', 'dragon-ball-fusion-world', 'Cartas del juego Dragon Ball Fusion World', 2),
       ('Dragon Ball Masters', 'dragon-ball-masters', 'Cartas del juego Dragon Ball Super Card Game', 3),
       ('Gundam Card Game', 'gundam-card-game', 'Cartas del juego Gundam Card Game', 4),
       ('Magic the gathering', 'magic-the-gathering', 'Cartas del juego Magic: The Gathering', 5),

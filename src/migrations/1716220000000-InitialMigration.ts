@@ -109,6 +109,7 @@ export class InitialMigration1716220000000 implements MigrationInterface {
       CREATE TABLE sales (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         seller_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        buyer_id UUID REFERENCES users(id) ON DELETE SET NULL,
         store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         description VARCHAR(100) NOT NULL,

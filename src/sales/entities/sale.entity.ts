@@ -13,6 +13,13 @@ export class Sale {
   @JoinColumn({ name: 'seller_id' })
   seller: User;
 
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'buyer_id' })
+  buyer: User;
+
+  @Column({ nullable: true })
+  buyer_id?: string;
+
   @Column({ nullable: true })
   store_id?: string;
 

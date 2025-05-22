@@ -114,6 +114,7 @@ CREATE TABLE Languages (
 CREATE TABLE Sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     seller_id UUID REFERENCES Users(id) ON DELETE CASCADE,
+    buyer_id UUID REFERENCES Users(id) ON DELETE SET NULL,
     store_id UUID REFERENCES Stores(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(100) NOT NULL,

@@ -125,4 +125,15 @@ export class SalesController {
     // Aquí podrías validar que el usuario sea el vendedor
     return this.salesService.update(id, req.user.id, updateSaleDto, image);
   }
+
+  @Post(':id/relist')
+  @ApiOperation({ summary: 'Relist a cancelled sale' })
+  @ApiResponse({ status: 201, description: 'Sale relisted successfully.' })
+  async relistSale(
+    @Param('id') id: string,
+    @Request() req: AuthRequest,
+    @Body() updateData?: Partial<CreateSaleDto>
+  ) {
+    return this.salesService.relistSale(id, req.user.id, updateData);
+  }
 }

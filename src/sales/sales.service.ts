@@ -154,20 +154,34 @@ export class SalesService {
   }
 
   async reserveSale(saleId: string, buyerId: string) {
-    const sale = await this.salesRepository.findOne({ where: { id: saleId } });
+    const sale = await this.salesRepository.findOne({ 
+      where: { id: saleId },
+      relations: ['seller', 'buyer'] 
+    });
+    
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.status !== 'available') throw new BadRequestException('Sale is not available');
+    if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot reserve your own sale');
+    if (sale.buyer_id) throw new BadRequestException('Sale is already reserved by another user');
+    
     sale.status = 'reserved';
+    sale.buyer_id = buyerId;
     sale.reserved_at = new Date();
     await this.salesRepository.save(sale);
     return { message: 'Sale reserved successfully' };
   }
 
   async shipSale(saleId: string, sellerId: string, shippingProofUrl: string) {
-    const sale = await this.salesRepository.findOne({ where: { id: saleId } });
+    const sale = await this.salesRepository.findOne({ 
+      where: { id: saleId },
+      relations: ['seller', 'buyer'] 
+    });
+    
     if (!sale) throw new NotFoundException('Sale not found');
-    if (sale.seller.id !== sellerId) throw new ForbiddenException('You are not the seller of this sale');
-    if (sale.status !== 'reserved') throw new BadRequestException('Sale is not reserved');
+    if (sale.seller.id !== sellerId) throw new ForbiddenException('Only the seller can mark the sale as shipped');
+    if (sale.status !== 'reserved') throw new BadRequestException('Sale must be reserved before shipping');
+    if (!sale.buyer_id) throw new BadRequestException('Sale must have a buyer to be shipped');
+    
     sale.status = 'shipped';
     sale.shipping_proof_url = shippingProofUrl;
     sale.shipped_at = new Date();
@@ -176,10 +190,16 @@ export class SalesService {
   }
 
   async confirmDelivery(saleId: string, buyerId: string, deliveryProofUrl: string) {
-    const sale = await this.salesRepository.findOne({ where: { id: saleId }, relations: ['seller', 'category', 'language'] });
+    const sale = await this.salesRepository.findOne({ 
+      where: { id: saleId }, 
+      relations: ['seller', 'buyer'] 
+    });
+    
     if (!sale) throw new NotFoundException('Sale not found');
-    // Optionally, validate that buyerId is the one who reserved the sale
-    if (sale.status !== 'shipped') throw new BadRequestException('Sale is not shipped');
+    if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot confirm delivery of your own sale');
+    if (sale.status !== 'shipped') throw new BadRequestException('Sale must be shipped before confirming delivery');
+    if (sale.buyer_id !== buyerId) throw new ForbiddenException('Only the buyer can confirm delivery');
+    
     sale.status = 'completed';
     sale.delivery_proof_url = deliveryProofUrl;
     sale.completed_at = new Date();
@@ -188,21 +208,35 @@ export class SalesService {
     // Create the purchase record
     await this.purchasesService.create(buyerId, {
       sale_id: sale.id,
-      quantity: sale.quantity, // or the correct quantity
+      quantity: sale.quantity,
     });
 
-    // Notification logic here
     return { message: 'Sale completed and purchase registered.' };
   }
 
   async cancelSale(saleId: string, userId: string) {
-    const sale = await this.salesRepository.findOne({ where: { id: saleId } });
+    const sale = await this.salesRepository.findOne({ 
+      where: { id: saleId },
+      relations: ['seller', 'buyer'] 
+    });
+    
     if (!sale) throw new NotFoundException('Sale not found');
-    if (sale.status !== 'reserved') throw new BadRequestException('Sale cannot be cancelled');
+    
+    // Solo permitir cancelar si está reservada
+    if (sale.status !== 'reserved') {
+      throw new BadRequestException('Only reserved sales can be cancelled');
+    }
+    
+    // Solo el vendedor o el comprador pueden cancelar
+    if (sale.seller.id !== userId && sale.buyer_id !== userId) {
+      throw new ForbiddenException('Only the seller or buyer can cancel this sale');
+    }
+    
     sale.status = 'cancelled';
     sale.cancelled_at = new Date();
+    // No limpiamos el buyer_id para mantener el historial
     await this.salesRepository.save(sale);
-    return { message: 'Sale cancelled' };
+    return { message: 'Sale cancelled successfully' };
   }
 
   async searchSales({ search, page = 1, limit = 20, offset, categories }: { search?: string; page?: number; limit?: number; offset?: number; categories?: string | string[] }): Promise<{ sales: SaleListItem[]; totalPages: number; currentPage: number; total: number }> {
@@ -281,5 +315,56 @@ export class SalesService {
       }
       throw error;
     }
+  }
+
+  async relistSale(saleId: string, sellerId: string, updateData?: Partial<CreateSaleDto>) {
+    // Buscar la venta original
+    const originalSale = await this.salesRepository.findOne({
+      where: { id: saleId },
+      relations: ['seller', 'category', 'language']
+    });
+
+    if (!originalSale) {
+      throw new NotFoundException('Original sale not found');
+    }
+
+    // Verificar que la venta esté cancelada
+    if (originalSale.status !== 'cancelled') {
+      throw new BadRequestException('Only cancelled sales can be relisted');
+    }
+
+    // Verificar que el usuario sea el vendedor original
+    if (originalSale.seller.id !== sellerId) {
+      throw new ForbiddenException('Only the original seller can relist this sale');
+    }
+
+    // Crear nueva venta basada en la original
+    const newSale = this.salesRepository.create({
+      seller: { id: sellerId },
+      store_id: originalSale.store_id,
+      name: updateData?.name || originalSale.name,
+      description: updateData?.description || originalSale.description,
+      price: updateData?.price || originalSale.price,
+      image_url: originalSale.image_url, // Mantener la misma imagen
+      quantity: updateData?.quantity || originalSale.quantity,
+      status: 'available',
+      category: { id: updateData?.category_id || originalSale.category.id },
+      language: { id: updateData?.language_id || originalSale.language.id },
+      views: 0, // Resetear vistas
+      // No copiamos los campos de comprobantes ni timestamps
+    });
+
+    // Guardar la nueva venta
+    const savedSale = await this.salesRepository.save(newSale);
+
+    return {
+      message: 'Sale relisted successfully',
+      data: {
+        ...savedSale,
+        seller: { id: savedSale.seller.id },
+        category: savedSale.category ? { id: savedSale.category.id } : null,
+        language: savedSale.language ? { id: savedSale.language.id } : null,
+      }
+    };
   }
 }

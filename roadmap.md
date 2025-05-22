@@ -52,3 +52,28 @@
   - ✅ Query optimization
   - ⬜ Cache implementation
   - ⬜ Additional endpoint documentation
+
+## 7. Sales Management Enhancement
+- ⬜ Implement sales state management
+  - ⬜ Create sales_cancelled table
+  - ⬜ Modify sales table to only store active sales (available, reserved, shipped states)
+  - ⬜ Update sales service for state transitions
+  - ⬜ Implement cancellation logic with reason tracking
+- ⬜ Implement unified sales history endpoint
+  - ⬜ Create flexible filtering system
+  - ⬜ Implement pagination
+  - ⬜ Add status-based filtering
+  - ⬜ Optimize queries for performance
+- ⬜ Implement user purchases endpoint
+  - ⬜ Create dedicated purchases listing
+  - ⬜ Add filtering and pagination
+  - ⬜ Implement purchase details view
+- ⬜ Update statistics system
+  - ⬜ Modify statistics calculation for new structure
+  - ⬜ Implement real-time statistics
+  - ⬜ Add performance optimizations
+- ⬜ Documentation and testing
+  - ⬜ Update API documentation
+  - ⬜ Add new endpoint tests
+  - ⬜ Document state transitions
+  - ⬜ Add performance benchmarks

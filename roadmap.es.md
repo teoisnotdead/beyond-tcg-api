@@ -52,3 +52,28 @@
   - ✅ Optimización de queries
   - ⬜ Implementación de cache
   - ⬜ Documentación adicional de endpoints 
+
+## 7. Mejora en Gestión de Ventas
+- ⬜ Implementar gestión de estados de ventas
+  - ⬜ Crear tabla sales_cancelled
+  - ⬜ Modificar tabla sales para solo almacenar ventas activas (estados available, reserved, shipped)
+  - ⬜ Actualizar servicio de ventas para transiciones de estado
+  - ⬜ Implementar lógica de cancelación con registro de razones
+- ⬜ Implementar endpoint unificado de historial de ventas
+  - ⬜ Crear sistema flexible de filtrado
+  - ⬜ Implementar paginación
+  - ⬜ Agregar filtrado por estado
+  - ⬜ Optimizar queries para rendimiento
+- ⬜ Implementar endpoint de compras de usuario
+  - ⬜ Crear listado dedicado de compras
+  - ⬜ Agregar filtrado y paginación
+  - ⬜ Implementar vista detallada de compras
+- ⬜ Actualizar sistema de estadísticas
+  - ⬜ Modificar cálculo de estadísticas para nueva estructura
+  - ⬜ Implementar estadísticas en tiempo real
+  - ⬜ Agregar optimizaciones de rendimiento
+- ⬜ Documentación y testing
+  - ⬜ Actualizar documentación de API
+  - ⬜ Agregar tests para nuevos endpoints
+  - ⬜ Documentar transiciones de estado
+  - ⬜ Agregar benchmarks de rendimiento 

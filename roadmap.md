@@ -54,26 +54,62 @@
   - ⬜ Additional endpoint documentation
 
 ## 7. Sales Management Enhancement
-- ⬜ Implement sales state management
-  - ⬜ Create sales_cancelled table
-  - ⬜ Modify sales table to only store active sales (available, reserved, shipped states)
-  - ⬜ Update sales service for state transitions
-  - ⬜ Implement cancellation logic with reason tracking
-- ⬜ Implement unified sales history endpoint
-  - ⬜ Create flexible filtering system
-  - ⬜ Implement pagination
-  - ⬜ Add status-based filtering
-  - ⬜ Optimize queries for performance
-- ⬜ Implement user purchases endpoint
-  - ⬜ Create dedicated purchases listing
-  - ⬜ Add filtering and pagination
-  - ⬜ Implement purchase details view
-- ⬜ Update statistics system
-  - ⬜ Modify statistics calculation for new structure
-  - ⬜ Implement real-time statistics
-  - ⬜ Add performance optimizations
-- ⬜ Documentation and testing
+- ✅ Implement sales state management
+  - ✅ Create sales_cancelled table
+  - ✅ Modify sales table to only store active sales (available, reserved, shipped states)
+  - ✅ Update sales service for state transitions
+  - ✅ Implement cancellation logic with reason tracking
+- ✅ Implement unified sales history endpoint
+  - ✅ Create flexible filtering system
+  - ✅ Implement pagination
+  - ✅ Add status-based filtering
+  - ✅ Optimize queries for performance
+- ⬜ Enhance Purchases Management
+  - ⬜ Implement detailed purchase view endpoint
+    - ⬜ Add complete purchase information
+    - ⬜ Include sale state history
+    - ⬜ Add related comments
+    - ⬜ Integrate notifications
+    - ⬜ Add shipping information
+  - ⬜ Improve existing purchase endpoints
+    - ⬜ Add advanced filtering (date, status, price)
+    - ⬜ Implement custom sorting
+    - ⬜ Enhance pagination
+    - ⬜ Add purchase statistics
+  - ⬜ Optimize purchase history integration
+    - ⬜ Improve sales-purchases data integration
+    - ⬜ Add more detailed information
+    - ⬜ Implement caching system
+  - ⬜ Enhance security and validation
+    - ⬜ Add strict state transition validation
+    - ⬜ Improve role-based access control
+    - ⬜ Implement subscription-based purchase limits
+- ⬜ Performance Optimization
+  - ⬜ Implement caching for history endpoints
+  - ⬜ Optimize database queries
+  - ⬜ Improve pagination for large datasets
+  - ⬜ Add query performance monitoring
+- ⬜ Documentation and Testing
   - ⬜ Update API documentation
-  - ⬜ Add new endpoint tests
+  - ⬜ Add endpoint tests
   - ⬜ Document state transitions
   - ⬜ Add performance benchmarks
+
+## 8. New Features (Based on Manual Testing)
+- ⬜ Implement sales state transitions validation
+  - ⬜ Add role-based validation (seller/buyer)
+  - ⬜ Add state transition rules
+  - ⬜ Implement validation middleware
+- ⬜ Enhance sales history features
+  - ⬜ Add date range filtering
+  - ⬜ Add category/language filtering
+  - ⬜ Implement search within history
+  - ⬜ Add sorting options
+- ⬜ Implement sales analytics
+  - ⬜ Add sales performance metrics
+  - ⬜ Implement sales trends analysis
+  - ⬜ Add user activity statistics
+- ⬜ Add bulk operations
+  - ⬜ Bulk state updates
+  - ⬜ Bulk cancellation
+  - ⬜ Bulk export

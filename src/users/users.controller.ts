@@ -112,18 +112,6 @@ export class UsersController {
     return this.commentsService.findAllByAuthor(id);
   }
 
-  @Get(':id/statistics')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get user statistics' })
-  async getUserStatistics(@Param('id') userId: string, @Request() req) {
-    // Validate user plan
-    const features = await this.subscriptionValidationService.getUserFeatures(req.user.id);
-    if (!features.statistics) {
-      throw new ForbiddenException('Your plan does not allow you to see statistics');
-    }
-    return this.usersService.getStatistics(userId);
-  }
-
   @Get('profile/metadata')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get user profile metadata with headers information' })

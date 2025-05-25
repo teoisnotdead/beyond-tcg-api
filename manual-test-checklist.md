@@ -12,41 +12,55 @@
 - ✅ Get user by ID (GET `/api/users/:id`)
 - ✅ Get all users (GET `/api/users`)
 - ✅ Search users (GET `/api/users/search`)
-- ✅ Get user statistics (GET `/api/users/:id/statistics`)
 - ✅ Get comments for user (GET `/api/users/:id/comments`)
 - ✅ Get comments authored by user (GET `/api/users/:id/comments-authored`)
 - ✅ Get user profile metadata (GET `/api/users/profile/metadata`)
 
-## 2. Sales
-- ✅ Create sale (POST `/api/sales`)
-- ✅ List active sales (GET `/api/sales`)
-- ✅ Search sales with filters and pagination (GET `/api/sales?search=...&page=...`)
-- ✅ Get sale details (GET `/api/sales/:id`)
-- ✅ Reserve sale (POST `/api/sales/:id/reserve`)
-- ✅ Mark sale as shipped (POST `/api/sales/:id/ship`)
-- ✅ Confirm sale delivery (POST `/api/sales/:id/confirm-delivery`)
-- ✅ Cancel sale (POST `/api/sales/:id/cancel`)
-- ✅ Delete sale (DELETE `/api/sales/:id`)
-- ✅ Update sale (PATCH `/api/sales/:id`)
-- ✅ Get sales history (GET `/api/sales/history`)
-  - ✅ Test pagination
-  - ✅ Test filters (type, status, search, category, language)
-  - ✅ Test date range filtering
-  - ✅ Verify related data (category, language, seller, buyer, store)
-- ✅ Test sales state transitions
-  - ✅ Verify role-based access (seller/buyer)
-  - ✅ Verify state transition rules
-  - ✅ Test cancellation with reason
-  - ✅ Verify notifications for state changes
+## 2. Sales (PRIORIDAD: volver a probar)
+- ⬜ Create sale (POST `/api/sales`)
+- ⬜ List active sales (GET `/api/sales`)
+- ⬜ Search sales with filters and pagination (GET `/api/sales?search=...&page=...`)
+- ⬜ Get sale details (GET `/api/sales/:id`)
+- ⬜ Reserve sale (POST `/api/sales/:id/reserve`)
+- ⬜ Mark sale as shipped (POST `/api/sales/:id/ship`)
+- ⬜ Confirm sale delivery (POST `/api/sales/:id/confirm-delivery`)
+- ⬜ Cancel sale (POST `/api/sales/:id/cancel`)
+- ⬜ Delete sale (DELETE `/api/sales/:id`)
+- ⬜ Update sale (PATCH `/api/sales/:id`)
+- ⬜ Get sales history (GET `/api/sales/history`)
+  - ⬜ Test all filters (type, status, search, category, language, store, price, quantity, proofs, date range)
+  - ⬜ Test pagination and sorting
+  - ⬜ Verify related data (category, language, seller, buyer, store)
+- ⬜ Test sales state transitions
+  - ⬜ Verify role-based access (seller/buyer)
+  - ⬜ Verify state transition rules
+  - ⬜ Test cancellation with reason
+  - ⬜ Verify notifications for state changes
 
-## 3. Purchases
+## 3. Statistics & Dashboards (PRIORIDAD: volver a probar)
+- ⬜ Get user statistics (GET `/api/sales/statistics/user`)
+- ⬜ Get store statistics (GET `/api/sales/statistics/store`)
+- ⬜ Test access by subscription/role
+
+## 4. Badges & Gamification
+- ⬜ List all badges (GET `/api/badges`)
+- ⬜ List user badges (GET `/api/badges/user/:userId`)
+- ⬜ List store badges (GET `/api/badges/store/:storeId`)
+- ⬜ Create badge (POST `/api/badges`)
+- ⬜ Update badge (PUT `/api/badges/:id`)
+- ⬜ Assign badge to user (POST `/api/badges/user/:userId/:badgeId`)
+- ⬜ Assign badge to store (POST `/api/badges/store/:storeId/:badgeId`)
+- ⬜ Remove badge from user (DELETE `/api/badges/user/:userId/:badgeId`)
+- ⬜ Remove badge from store (DELETE `/api/badges/store/:storeId/:badgeId`)
+
+## 5. Purchases
 - ⬜ Make a purchase (POST `/api/purchases`)
 - ⬜ List user purchases (GET `/api/purchases/user`)
 - ⬜ List purchases as seller (GET `/api/purchases/seller`)
 - ⬜ Test purchase history integration with sales history
 - ⬜ Verify purchase notifications
 
-## 4. Stores
+## 6. Stores
 - ⬜ Create store (POST `/api/stores`)
 - ⬜ Get store by ID (GET `/api/stores/:id`)
 - ⬜ Update store branding (PATCH `/api/stores/:id/branding`)
@@ -54,27 +68,27 @@
 - ⬜ Test store statistics with new sales structure
 - ⬜ Verify store featured status based on sales performance
 
-## 5. Favorites
+## 7. Favorites
 - ⬜ Add sale to favorites (POST `/api/favorites`)
 - ⬜ List user favorites (GET `/api/favorites/user`)
 - ⬜ Remove favorite (DELETE `/api/favorites/:saleId`)
 - ⬜ Test favorites with cancelled sales
 
-## 6. Comments
+## 8. Comments
 - ⬜ Add comment to sale or store (POST `/api/comments`)
 - ⬜ List comments for a sale (GET `/api/comments/sale/:saleId`)
 - ⬜ List comments for a store (GET `/api/comments/store/:storeId`)
 - ⬜ List comments directed to a user (GET `/api/comments/user/:userId`)
 - ⬜ Test comments with cancelled sales
 
-## 7. Subscriptions
+## 9. Subscriptions
 - ⬜ Get current subscription (GET `/api/subscriptions/current`)
 - ⬜ Change/upgrade subscription plan (POST `/api/subscriptions/upgrade`)
 - ⬜ List all subscription plans (GET `/api/subscriptions/plans`)
 - ⬜ Test sales limits with different subscription plans
 - ⬜ Verify subscription expiration handling
 
-## 8. Notifications
+## 10. Notifications
 - ⬜ Receive notifications via WebSocket (check in frontend or with WS client)
 - ⬜ Mark notification as read (POST `/api/notifications/:id/read`)
 - ⬜ List user notifications (GET `/api/notifications/user`)
@@ -82,32 +96,32 @@
 - ⬜ Test notifications for sales state changes
 - ⬜ Verify i18n in notifications
 
-## 9. Categories & Languages
+## 11. Categories & Languages
 - ⬜ List categories (GET `/api/categories`)
 - ⬜ List languages (GET `/api/languages`)
 - ⬜ Test category/language filtering in sales history
 
-## 10. Security & Headers
+## 12. Security & Headers
 - ⬜ Test endpoints with required headers and valid values
 - ⬜ Test endpoints with missing or invalid headers (should return 400/401)
 - ⬜ Test access to protected endpoints without token (should return 401)
 - ⬜ Test access to protected endpoints with invalid token (should return 401)
 - ⬜ Test role-based access control for sales state changes
 
-## 11. Responses & Errors
+## 13. Responses & Errors
 - ✅ Verify all successful responses use the standard format (`success`, `message`, `data`)
 - ✅ Verify all errors use the standard format (`success: false`, `message`, `error`, `statusCode`)
 - ⬜ Test error handling for invalid state transitions
 - ⬜ Verify error messages for role-based access violations
 
-## 12. Performance & Optimization
+## 14. Performance & Optimization
 - ⬜ Test sales history endpoint with large datasets
 - ⬜ Verify query performance with multiple filters
 - ⬜ Test concurrent requests for state changes
 - ⬜ Monitor response times for enriched data
 - ⬜ Test WebSocket connection stability 
 
-## 13. Nuevos Casos de Prueba (Historial de Ventas)
+## 15. Nuevos Casos de Prueba (Historial de Ventas)
 - ⬜ Test date range filtering in sales history
   - ⬜ Filter by specific date
   - ⬜ Filter by date range
@@ -133,7 +147,7 @@
   - ⬜ Sort by type (sale/purchase)
   - ⬜ Test combined sorting with filters
 
-## 14. Nuevos Casos de Prueba (Validación de Estados)
+## 16. Nuevos Casos de Prueba (Validación de Estados)
 - ⬜ Test role-based state transitions
   - ⬜ Verify seller-only transitions
   - ⬜ Verify buyer-only transitions
@@ -151,7 +165,7 @@
   - ⬜ Verify cancellation notifications
   - ⬜ Test cancellation impact on related entities
 
-## 15. Nuevos Casos de Prueba (Integración y Rendimiento)
+## 17. Nuevos Casos de Prueba (Integración y Rendimiento)
 - ⬜ Test sales-purchases integration
   - ⬜ Verify purchase history in sales history
   - ⬜ Test filtering purchases in sales history

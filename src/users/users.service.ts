@@ -145,40 +145,6 @@ export class UsersService {
     }
   }
 
-  async getStatistics(userId: string) {
-    try {
-      // Purchases and money spent
-      const purchases = await this.purchasesRepository.find({ where: { user: { id: userId } } });
-      const totalPurchases = purchases.length;
-      const totalSpent = purchases.reduce((acc, p) => acc + Number(p.price) * p.quantity, 0);
-      // Sales and money earned
-      const sales = await this.salesRepository.find({ where: { seller: { id: userId } } });
-      const totalSales = sales.filter(s => s.status === 'completed').length;
-      const totalRevenue = sales.filter(s => s.status === 'completed').reduce((acc, s) => acc + Number(s.price) * s.quantity, 0);
-      // Favorites given
-      const favoritesGiven = await this.favoriteRepository.count({ where: { user: { id: userId } } });
-      // Favorites received (in user's sales)
-      const saleIds = sales.map(s => s.id);
-      let favoritesReceived = 0;
-      if (saleIds.length > 0) {
-        favoritesReceived = await this.favoriteRepository.createQueryBuilder('favorite')
-          .where('favorite.saleId IN (:...saleIds)', { saleIds })
-          .getCount();
-      }
-      return {
-        totalPurchases,
-        totalSpent,
-        totalSales,
-        totalRevenue,
-        favoritesGiven,
-        favoritesReceived
-      };
-    } catch (error) {
-      console.error('[USERS SERVICE] Error en getStatistics:', error);
-      throw error;
-    }
-  }
-
   async searchUsers({ search, page = 1, limit = 20, offset, roles }: { search?: string; page?: number; limit?: number; offset?: number; roles?: string | string[] }) {
     try {
       let skip = 0;

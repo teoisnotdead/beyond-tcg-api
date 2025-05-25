@@ -8,14 +8,18 @@ import { SubscriptionValidationService } from '../subscriptions/subscription-val
 import { CommentsService } from '../comments/comments.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateSaleDto } from './dto/update-sale.dto';
-import { SalesStateService } from './sales-state.service';
+import { SalesStateService } from './services/sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
 import { Sale, SaleStatus } from './entities/sale.entity';
-import { SalesHistoryService } from './sales-history.service';
+import { SalesHistoryService } from './services/sales-history.service';
 import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from './dto/sales-history-filter.dto';
 import { HistoryItem } from './interfaces/history-item.interface';
 import { HistoryItemSchema } from './interfaces/history-item.schema';
 import { SalesTransitionRulesService } from './services/sales-transition-rules.service';
+import { SalesMetricsService } from './services/sales-metrics.service';
+import { SalesMetricsDto } from './dto/sales-metrics.dto';
+import { SalesReportService } from './services/sales-report.service';
+import { SalesReportDto, SalesReportFilterDto } from './dto/sales-report.dto';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -33,6 +37,8 @@ export class SalesController {
     private readonly salesStateService: SalesStateService,
     private readonly salesHistoryService: SalesHistoryService,
     private readonly salesTransitionRulesService: SalesTransitionRulesService,
+    private readonly salesMetricsService: SalesMetricsService,
+    private readonly salesReportService: SalesReportService,
   ) {}
 
   @Post()
@@ -322,5 +328,92 @@ export class SalesController {
       default:
         throw new BadRequestException('Invalid status');
     }
+  }
+
+  @Get('metrics')
+  @ApiOperation({ 
+    summary: 'Get sales metrics',
+    description: 'Returns comprehensive sales metrics including revenue, conversion rates, and performance by category and store'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Sales metrics retrieved successfully',
+    type: SalesMetricsDto
+  })
+  @ApiQuery({ 
+    name: 'start_date', 
+    required: false, 
+    type: Date, 
+    description: 'Start date for metrics calculation (ISO format)' 
+  })
+  @ApiQuery({ 
+    name: 'end_date', 
+    required: false, 
+    type: Date, 
+    description: 'End date for metrics calculation (ISO format)' 
+  })
+  async getSalesMetrics(
+    @Request() req,
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+  ): Promise<SalesMetricsDto> {
+    return this.salesMetricsService.getSalesMetrics(
+      req.user.id,
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
+  }
+
+  @Get('reports')
+  @ApiOperation({ 
+    summary: 'Obtener reportes básicos de ventas',
+    description: 'Retorna reportes detallados de ventas incluyendo métricas por período, categoría, tienda y estados'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Reportes generados exitosamente',
+    type: SalesReportDto
+  })
+  @ApiQuery({ 
+    name: 'start_date', 
+    required: false, 
+    type: Date, 
+    description: 'Fecha de inicio del reporte (ISO format)' 
+  })
+  @ApiQuery({ 
+    name: 'end_date', 
+    required: false, 
+    type: Date, 
+    description: 'Fecha de fin del reporte (ISO format)' 
+  })
+  @ApiQuery({ 
+    name: 'category_ids', 
+    required: false, 
+    type: [String], 
+    description: 'IDs de categorías a incluir' 
+  })
+  @ApiQuery({ 
+    name: 'store_ids', 
+    required: false, 
+    type: [String], 
+    description: 'IDs de tiendas a incluir' 
+  })
+  @ApiQuery({ 
+    name: 'group_by', 
+    required: false, 
+    enum: ['day', 'week', 'month'],
+    description: 'Agrupar por día/semana/mes' 
+  })
+  @ApiQuery({ 
+    name: 'limit', 
+    required: false, 
+    type: Number,
+    description: 'Límite de resultados para categorías/tiendas' 
+  })
+  async getSalesReports(
+    @Request() req,
+    @Query() filters: SalesReportFilterDto,
+  ): Promise<SalesReportDto> {
+    return this.salesReportService.generateReport(req.user.id, filters);
   }
 }

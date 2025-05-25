@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, SelectQueryBuilder } from 'typeorm';
-import { Sale, SaleStatus } from './entities/sale.entity';
-import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from './dto/sales-history-filter.dto';
-import { Purchase } from '../purchases/entities/purchase.entity';
-import { HistoryItem } from './interfaces/history-item.interface';
+import { Sale, SaleStatus } from '../entities/sale.entity';
+import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from '../dto/sales-history-filter.dto';
+import { Purchase } from '../../purchases/entities/purchase.entity';
+import { HistoryItem } from '../interfaces/history-item.interface';
 
 @Injectable()
 export class SalesHistoryService {

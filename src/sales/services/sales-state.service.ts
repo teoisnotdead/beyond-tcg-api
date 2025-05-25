@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { Sale, SaleStatus } from './entities/sale.entity';
-import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
-import { User } from '../users/entities/user.entity';
+import { Sale, SaleStatus } from '../entities/sale.entity';
+import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from '../dto/change-sale-state.dto';
+import { User } from '../../users/entities/user.entity';
 
 @Injectable()
 export class SalesStateService {

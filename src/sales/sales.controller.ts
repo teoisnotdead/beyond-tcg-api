@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch, Query } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -11,6 +11,10 @@ import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SalesStateService } from './sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
 import { Sale } from './entities/sale.entity';
+import { SalesHistoryService } from './sales-history.service';
+import { SalesHistoryFilterDto } from './dto/sales-history-filter.dto';
+import { HistoryItem } from './interfaces/history-item.interface';
+import { HistoryItemSchema } from './interfaces/history-item.schema';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -26,6 +30,7 @@ export class SalesController {
     private readonly subscriptionValidationService: SubscriptionValidationService,
     private readonly commentsService: CommentsService,
     private readonly salesStateService: SalesStateService,
+    private readonly salesHistoryService: SalesHistoryService,
   ) {}
 
   @Post()
@@ -161,5 +166,25 @@ export class SalesController {
     @Body() updateData?: Partial<CreateSaleDto>
   ) {
     return this.salesService.relistSale(id, req.user.id, updateData);
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get unified sales history' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns a paginated list of sales, cancelled sales, and purchases',
+    type: HistoryItemSchema,
+    isArray: true
+  })
+  async getSalesHistory(
+    @Request() req,
+    @Query() filters: SalesHistoryFilterDto
+  ): Promise<{
+    items: HistoryItem[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    return this.salesHistoryService.getSalesHistory(req.user.id, filters);
   }
 }

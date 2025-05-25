@@ -313,9 +313,9 @@ SET name = EXCLUDED.name,
 
 INSERT INTO SubscriptionPlans (id, name, price, duration_days, description, tier, features, is_active, created_at, updated_at)
 VALUES
-  (gen_random_uuid(), 'Free', 0.00, 3650, 'Plan gratuito por defecto', null, '{"maxSales": 10, "canCreateStore": false, "branding": false, "statistics": false, "featured": false, "support": "community"}', true, now(), now()),
-  (gen_random_uuid(), 'Pro', 4.99, 30, 'Plan Pro para usuarios avanzados', null, '{"maxSales": 50, "canCreateStore": false, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now()),
-  (gen_random_uuid(), 'Tienda', 9.99, 30, 'Plan para tiendas profesionales', null, '{"maxSales": 1000, "canCreateStore": true, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now());
+  (gen_random_uuid(), 'Free', 0.00, 3650, 'Plan gratuito por defecto', 'free', '{"maxSales": 10, "canCreateStore": false, "branding": false, "statistics": false, "featured": false, "support": "community"}', true, now(), now()),
+  (gen_random_uuid(), 'Pro', 4.99, 30, 'Plan Pro para usuarios avanzados', 'pro', '{"maxSales": 50, "canCreateStore": false, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now()),
+  (gen_random_uuid(), 'Tienda', 9.99, 30, 'Plan para tiendas profesionales', 'store', '{"maxSales": 1000, "canCreateStore": true, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now());
 
 -- Datos iniciales de Badges
 -- Usando placeholders de iconos de FontAwesome (gratuitos y ampliamente usados)

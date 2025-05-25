@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -10,11 +10,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SalesStateService } from './sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
-import { Sale } from './entities/sale.entity';
+import { Sale, SaleStatus } from './entities/sale.entity';
 import { SalesHistoryService } from './sales-history.service';
 import { SalesHistoryFilterDto } from './dto/sales-history-filter.dto';
 import { HistoryItem } from './interfaces/history-item.interface';
 import { HistoryItemSchema } from './interfaces/history-item.schema';
+import { SalesTransitionRulesService } from './services/sales-transition-rules.service';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -31,6 +32,7 @@ export class SalesController {
     private readonly commentsService: CommentsService,
     private readonly salesStateService: SalesStateService,
     private readonly salesHistoryService: SalesHistoryService,
+    private readonly salesTransitionRulesService: SalesTransitionRulesService,
   ) {}
 
   @Post()
@@ -186,5 +188,68 @@ export class SalesController {
     totalPages: number;
   }> {
     return this.salesHistoryService.getSalesHistory(req.user.id, filters);
+  }
+
+  @Patch(':saleId/status')
+  @ApiOperation({ summary: 'Update sale status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Sale status updated successfully',
+    type: Sale,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid state transition' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Sale not found' })
+  async updateSaleStatus(
+    @Param('saleId') saleId: string,
+    @Body('status') status: SaleStatus,
+    @Body() updateData: any,
+    @Request() req: AuthRequest,
+  ): Promise<Sale> {
+    const sale = await this.salesService.findOne(saleId);
+    if (!sale) {
+      throw new NotFoundException('Sale not found');
+    }
+
+    const userRole = sale.seller.id === req.user.id ? 'seller' : 'buyer';
+    const validTransitions = this.salesTransitionRulesService.getValidTransitions(
+      sale.status,
+      userRole,
+    );
+
+    if (!validTransitions.includes(status)) {
+      throw new BadRequestException({
+        message: 'Invalid state transition',
+        errors: [`Cannot transition from ${sale.status} to ${status}`],
+        validTransitions,
+      });
+    }
+
+    switch (status) {
+      case SaleStatus.RESERVED:
+        return this.salesStateService.reserveSale(
+          { saleId, ...updateData },
+          req.user.id,
+        );
+      case SaleStatus.SHIPPED:
+        return this.salesStateService.shipSale(
+          { saleId, ...updateData },
+          req.user.id,
+        );
+      case SaleStatus.DELIVERED:
+        return this.salesStateService.confirmDelivery(
+          { saleId, ...updateData },
+          req.user.id,
+        );
+      case SaleStatus.COMPLETED:
+        return this.salesStateService.completeSale(saleId, req.user.id);
+      case SaleStatus.CANCELLED:
+        return this.salesStateService.cancelSale(
+          { saleId, ...updateData },
+          req.user.id,
+        );
+      default:
+        throw new BadRequestException('Invalid status');
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { forwardRef, Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Sale } from './entities/sale.entity';
 import { Purchase } from '../purchases/entities/purchase.entity';
@@ -15,6 +15,11 @@ import { Category } from '../categories/entities/category.entity';
 import { Language } from '../languages/entities/language.entity';
 import { User } from '../users/entities/user.entity';
 import { Store } from '../stores/entities/store.entity';
+import { SalesTransitionRulesService } from './services/sales-transition-rules.service';
+import { SalesTransitionMiddleware } from './middleware/sales-transition.middleware';
+import { StoresModule } from '../stores/stores.module';
+import { CategoriesModule } from '../categories/categories.module';
+import { LanguagesModule } from '../languages/languages.module';
 
 @Module({
   imports: [
@@ -29,15 +34,25 @@ import { Store } from '../stores/entities/store.entity';
     forwardRef(() => SubscriptionsModule),
     forwardRef(() => PurchasesModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => StoresModule),
     CommentsModule,
     CloudinaryModule,
+    CategoriesModule,
+    LanguagesModule,
   ],
   providers: [
     SalesService,
     SalesStateService,
     SalesHistoryService,
+    SalesTransitionRulesService,
   ],
   controllers: [SalesController],
   exports: [SalesService, SalesStateService, SalesHistoryService],
 })
-export class SalesModule {}
+export class SalesModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SalesTransitionMiddleware)
+      .forRoutes('sales/:saleId/status');
+  }
+}

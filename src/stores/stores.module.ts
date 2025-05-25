@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Store } from './entities/store.entity';
 import { StoreSocialLink } from './entities/store-social-link.entity';
@@ -18,7 +18,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     TypeOrmModule.forFeature([Store, StoreSocialLink, StoreRating, Sale, Favorite]),
     SubscriptionsModule,
     CommentsModule,
-    SalesModule,
+    forwardRef(() => SalesModule),
     FavoritesModule,
     CloudinaryModule,
   ],

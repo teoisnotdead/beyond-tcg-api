@@ -1,9 +1,10 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Query, Param } from '@nestjs/common';
 import { PurchasesService } from './purchases.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { FindPurchasesDto } from './dto/find-purchases.dto';
+import { PurchaseDetailDto } from './dto/purchase-detail.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 
 interface AuthRequest extends ExpressRequest {
@@ -26,12 +27,12 @@ export class PurchasesController {
 
   @Get('my')
   @ApiOperation({ 
-    summary: 'Obtener mis compras',
-    description: 'Retorna una lista paginada de las compras del usuario con filtros avanzados'
+    summary: 'Get my purchases',
+    description: 'Returns a paginated list of user purchases with advanced filters'
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Lista de compras obtenida exitosamente.',
+    description: 'Purchase list retrieved successfully.',
     schema: {
       properties: {
         data: {
@@ -59,12 +60,12 @@ export class PurchasesController {
 
   @Get('sold')
   @ApiOperation({ 
-    summary: 'Obtener mis ventas como compras',
-    description: 'Retorna una lista paginada de las ventas del usuario como compras con filtros avanzados'
+    summary: 'Get my sales as purchases',
+    description: 'Returns a paginated list of user sales as purchases with advanced filters'
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Lista de ventas como compras obtenida exitosamente.',
+    description: 'Sales as purchases list retrieved successfully.',
     schema: {
       properties: {
         data: {
@@ -88,5 +89,25 @@ export class PurchasesController {
     @Query() filters: FindPurchasesDto
   ) {
     return this.purchasesService.findAllBySeller(req.user.id, filters);
+  }
+
+  @Get(':id')
+  @ApiOperation({ 
+    summary: 'Get purchase details',
+    description: 'Returns detailed information about a specific purchase, including seller, buyer and shipping status'
+  })
+  @ApiParam({ name: 'id', description: 'Purchase ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Purchase details retrieved successfully.',
+    type: PurchaseDetailDto
+  })
+  @ApiResponse({ status: 404, description: 'Purchase not found.' })
+  @ApiResponse({ status: 403, description: 'You do not have permission to view this purchase.' })
+  findOneDetailed(
+    @Param('id') id: string,
+    @Request() req: AuthRequest
+  ): Promise<PurchaseDetailDto> {
+    return this.purchasesService.findOneDetailed(id, req.user.id);
   }
 }

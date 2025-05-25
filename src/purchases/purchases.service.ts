@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, ILike } from 'typeorm';
 import { Purchase } from './entities/purchase.entity';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { FindPurchasesDto, PurchaseSortField, SortOrder } from './dto/find-purchases.dto';
+import { PurchaseDetailDto, UserBasicInfoDto, SaleBasicInfoDto } from './dto/purchase-detail.dto';
 import { Sale, SaleStatus } from '../sales/entities/sale.entity';
 import { User } from '../users/entities/user.entity';
 
@@ -151,5 +152,79 @@ export class PurchasesService {
     const order = filters.sortOrder ?? SortOrder.DESC;
     
     queryBuilder.orderBy(`purchase.${orderBy}`, order);
+  }
+
+  async findOneDetailed(purchaseId: string, userId: string): Promise<PurchaseDetailDto> {
+    const purchase = await this.purchasesRepository.findOne({
+      where: { id: purchaseId },
+      relations: [
+        'user',
+        'seller',
+        'sale',
+        'category',
+        'language'
+      ],
+    });
+
+    if (!purchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    // Verify user has permission to view this purchase
+    if (purchase.user.id !== userId && purchase.seller.id !== userId) {
+      throw new ForbiddenException('You do not have permission to view this purchase');
+    }
+
+    // Get updated sale information
+    const sale = await this.salesRepository.findOne({
+      where: { id: purchase.sale.id },
+      select: ['id', 'status', 'quantity', 'created_at', 'shipping_proof_url', 'delivery_proof_url', 'shipped_at', 'delivered_at', 'completed_at']
+    });
+
+    if (!sale) {
+      throw new NotFoundException('Associated sale not found');
+    }
+
+    // Mapear a DTOs
+    const userBasicInfo: UserBasicInfoDto = {
+      id: purchase.user.id,
+      name: purchase.user.name,
+      avatar_url: purchase.user.avatar_url
+    };
+
+    const sellerBasicInfo: UserBasicInfoDto = {
+      id: purchase.seller.id,
+      name: purchase.seller.name,
+      avatar_url: purchase.seller.avatar_url
+    };
+
+    const saleBasicInfo: SaleBasicInfoDto = {
+      id: sale.id,
+      status: sale.status,
+      remaining_quantity: sale.quantity,
+      created_at: sale.created_at
+    };
+
+    return {
+      id: purchase.id,
+      user: userBasicInfo,
+      seller: sellerBasicInfo,
+      sale: saleBasicInfo,
+      name: purchase.name,
+      description: purchase.description,
+      price: purchase.price,
+      quantity: purchase.quantity,
+      total_price: Number(purchase.price) * purchase.quantity,
+      image_url: purchase.image_url,
+      category: purchase.category,
+      language: purchase.language,
+      created_at: purchase.created_at,
+      shipping_status: sale.status,
+      shipping_proof_url: sale.shipping_proof_url,
+      shipped_at: sale.shipped_at,
+      delivery_proof_url: sale.delivery_proof_url,
+      delivered_at: sale.delivered_at,
+      completed_at: sale.completed_at
+    };
   }
 }

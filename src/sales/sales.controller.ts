@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, Forbidd
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 import { CommentsService } from '../comments/comments.service';
@@ -12,7 +12,7 @@ import { SalesStateService } from './sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
 import { Sale, SaleStatus } from './entities/sale.entity';
 import { SalesHistoryService } from './sales-history.service';
-import { SalesHistoryFilterDto } from './dto/sales-history-filter.dto';
+import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from './dto/sales-history-filter.dto';
 import { HistoryItem } from './interfaces/history-item.interface';
 import { HistoryItemSchema } from './interfaces/history-item.schema';
 import { SalesTransitionRulesService } from './services/sales-transition-rules.service';
@@ -171,13 +171,74 @@ export class SalesController {
   }
 
   @Get('history')
-  @ApiOperation({ summary: 'Get unified sales history' })
+  @ApiOperation({ 
+    summary: 'Get unified sales history',
+    description: 'Returns a paginated list of sales, cancelled sales, and purchases with advanced filtering and statistics'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'Returns a paginated list of sales, cancelled sales, and purchases',
-    type: HistoryItemSchema,
-    isArray: true
+    description: 'Returns a paginated list of sales history with statistics',
+    schema: {
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/HistoryItem' }
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        totalPages: { type: 'number' },
+        stats: {
+          type: 'object',
+          properties: {
+            total_sales: { type: 'number' },
+            total_revenue: { type: 'number' },
+            sales_by_status: {
+              type: 'object',
+              properties: {
+                available: { type: 'number' },
+                reserved: { type: 'number' },
+                shipped: { type: 'number' },
+                delivered: { type: 'number' },
+                completed: { type: 'number' },
+                cancelled: { type: 'number' }
+              }
+            },
+            sales_by_period: {
+              type: 'object',
+              properties: {
+                today: { type: 'number' },
+                this_week: { type: 'number' },
+                this_month: { type: 'number' }
+              }
+            }
+          }
+        }
+      }
+    }
   })
+  @ApiQuery({ name: 'type', enum: HistoryItemType, required: false, description: 'Filter by item type' })
+  @ApiQuery({ name: 'types', enum: HistoryItemType, isArray: true, required: false, description: 'Filter by multiple item types' })
+  @ApiQuery({ name: 'status', enum: SaleStatus, required: false, description: 'Filter by status' })
+  @ApiQuery({ name: 'statuses', enum: SaleStatus, isArray: true, required: false, description: 'Filter by multiple statuses' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search in name and description' })
+  @ApiQuery({ name: 'category_id', required: false, description: 'Filter by category ID' })
+  @ApiQuery({ name: 'category_ids', isArray: true, required: false, description: 'Filter by multiple category IDs' })
+  @ApiQuery({ name: 'language_id', required: false, description: 'Filter by language ID' })
+  @ApiQuery({ name: 'language_ids', isArray: true, required: false, description: 'Filter by multiple language IDs' })
+  @ApiQuery({ name: 'store_id', required: false, description: 'Filter by store ID' })
+  @ApiQuery({ name: 'store_ids', isArray: true, required: false, description: 'Filter by multiple store IDs' })
+  @ApiQuery({ name: 'start_date', required: false, description: 'Filter by start date (ISO format)' })
+  @ApiQuery({ name: 'end_date', required: false, description: 'Filter by end date (ISO format)' })
+  @ApiQuery({ name: 'min_price', required: false, description: 'Filter by minimum price' })
+  @ApiQuery({ name: 'max_price', required: false, description: 'Filter by maximum price' })
+  @ApiQuery({ name: 'min_quantity', required: false, description: 'Filter by minimum quantity' })
+  @ApiQuery({ name: 'max_quantity', required: false, description: 'Filter by maximum quantity' })
+  @ApiQuery({ name: 'has_shipping_proof', required: false, description: 'Filter by presence of shipping proof' })
+  @ApiQuery({ name: 'has_delivery_proof', required: false, description: 'Filter by presence of delivery proof' })
+  @ApiQuery({ name: 'sort_by', enum: SortField, required: false, description: 'Field to sort by' })
+  @ApiQuery({ name: 'sort_order', enum: SortOrder, required: false, description: 'Sort order' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 20)' })
   async getSalesHistory(
     @Request() req,
     @Query() filters: SalesHistoryFilterDto
@@ -186,6 +247,16 @@ export class SalesController {
     total: number;
     page: number;
     totalPages: number;
+    stats?: {
+      total_sales: number;
+      total_revenue: number;
+      sales_by_status: Record<SaleStatus, number>;
+      sales_by_period: {
+        today: number;
+        this_week: number;
+        this_month: number;
+      };
+    };
   }> {
     return this.salesHistoryService.getSalesHistory(req.user.id, filters);
   }

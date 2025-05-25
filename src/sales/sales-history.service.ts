@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, SelectQueryBuilder } from 'typeorm';
 import { Sale, SaleStatus } from './entities/sale.entity';
-import { SalesHistoryFilterDto, HistoryItemType } from './dto/sales-history-filter.dto';
+import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from './dto/sales-history-filter.dto';
 import { Purchase } from '../purchases/entities/purchase.entity';
 import { HistoryItem } from './interfaces/history-item.interface';
 
@@ -21,8 +21,24 @@ export class SalesHistoryService {
     total: number;
     page: number;
     totalPages: number;
+    stats?: {
+      total_sales: number;
+      total_revenue: number;
+      sales_by_status: Record<SaleStatus, number>;
+      sales_by_period: {
+        today: number;
+        this_week: number;
+        this_month: number;
+      };
+    };
   }> {
-    const { page = 1, limit = 20, types = [HistoryItemType.SALE, HistoryItemType.CANCELLED_SALE, HistoryItemType.PURCHASE] } = filters;
+    const { 
+      page = 1, 
+      limit = 20, 
+      types = [HistoryItemType.SALE, HistoryItemType.CANCELLED_SALE, HistoryItemType.PURCHASE],
+      sort_by = SortField.CREATED_AT,
+      sort_order = SortOrder.DESC
+    } = filters;
     const skip = (page - 1) * limit;
 
     // Build base queries for each type
@@ -31,6 +47,10 @@ export class SalesHistoryService {
       this.getCancelledSalesQuery(userId, filters),
       this.getPurchasesQuery(userId, filters)
     ]);
+
+    // Build WHERE clause for filters
+    const whereClause = this.buildWhereClause(filters);
+    const orderClause = `ORDER BY ${sort_by} ${sort_order}`;
 
     // Combine queries using raw SQL for better performance
     const combinedQuery = `
@@ -43,51 +63,62 @@ export class SalesHistoryService {
       )
       SELECT * FROM combined_history
       WHERE 1=1
-      ${filters.search ? `AND (name ILIKE $${Object.keys(filters).indexOf('search') + 1} OR description ILIKE $${Object.keys(filters).indexOf('search') + 1})` : ''}
-      ${filters.category_id ? `AND category_id = $${Object.keys(filters).indexOf('category_id') + 1}` : ''}
-      ${filters.language_id ? `AND language_id = $${Object.keys(filters).indexOf('language_id') + 1}` : ''}
-      ${filters.start_date ? `AND created_at >= $${Object.keys(filters).indexOf('start_date') + 1}` : ''}
-      ${filters.end_date ? `AND created_at <= $${Object.keys(filters).indexOf('end_date') + 1}` : ''}
-      ORDER BY created_at DESC
+      ${whereClause}
+      ${orderClause}
       LIMIT $${Object.keys(filters).length + 1} OFFSET $${Object.keys(filters).length + 2}
     `;
 
-    // Get total count
-    const countQuery = `
+    // Get total count and stats
+    const statsQuery = `
       WITH combined_history AS (
         ${activeSalesQuery.getQuery()}
         UNION ALL
         ${cancelledSalesQuery.getQuery()}
         UNION ALL
         ${purchasesQuery.getQuery()}
+      ),
+      filtered_history AS (
+        SELECT * FROM combined_history
+        WHERE 1=1
+        ${whereClause}
       )
-      SELECT COUNT(*) as count FROM combined_history
-      WHERE 1=1
-      ${filters.search ? `AND (name ILIKE $${Object.keys(filters).indexOf('search') + 1} OR description ILIKE $${Object.keys(filters).indexOf('search') + 1})` : ''}
-      ${filters.category_id ? `AND category_id = $${Object.keys(filters).indexOf('category_id') + 1}` : ''}
-      ${filters.language_id ? `AND language_id = $${Object.keys(filters).indexOf('language_id') + 1}` : ''}
-      ${filters.start_date ? `AND created_at >= $${Object.keys(filters).indexOf('start_date') + 1}` : ''}
-      ${filters.end_date ? `AND created_at <= $${Object.keys(filters).indexOf('end_date') + 1}` : ''}
+      SELECT 
+        COUNT(*) as total_count,
+        SUM(price * quantity) as total_revenue,
+        COUNT(CASE WHEN status = 'available' THEN 1 END) as available_count,
+        COUNT(CASE WHEN status = 'reserved' THEN 1 END) as reserved_count,
+        COUNT(CASE WHEN status = 'shipped' THEN 1 END) as shipped_count,
+        COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered_count,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+        COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as today_count,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as week_count,
+        COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as month_count
+      FROM filtered_history
     `;
 
     // Prepare parameters
-    const parameters = [
-      ...(filters.search ? [`%${filters.search}%`, `%${filters.search}%`] : []),
-      ...(filters.category_id ? [filters.category_id] : []),
-      ...(filters.language_id ? [filters.language_id] : []),
-      ...(filters.start_date ? [filters.start_date] : []),
-      ...(filters.end_date ? [filters.end_date] : []),
-      limit,
-      skip
-    ];
+    const parameters = this.buildQueryParameters(filters, limit, skip);
 
     // Execute queries
-    const [results, [{ count }]] = await Promise.all([
+    const [results, [{ 
+      total_count, 
+      total_revenue,
+      available_count,
+      reserved_count,
+      shipped_count,
+      delivered_count,
+      completed_count,
+      cancelled_count,
+      today_count,
+      week_count,
+      month_count
+    }]] = await Promise.all([
       this.dataSource.query(combinedQuery, parameters),
-      this.dataSource.query(countQuery, parameters.slice(0, -2))
+      this.dataSource.query(statsQuery, parameters.slice(0, -2))
     ]);
 
-    const total = parseInt(count);
+    const total = parseInt(total_count);
 
     // Enrich results with related data
     const enrichedResults = await Promise.all(
@@ -116,7 +147,180 @@ export class SalesHistoryService {
       total,
       page,
       totalPages: Math.ceil(total / limit),
+      stats: {
+        total_sales: total,
+        total_revenue: parseFloat(total_revenue) || 0,
+        sales_by_status: {
+          [SaleStatus.AVAILABLE]: parseInt(available_count) || 0,
+          [SaleStatus.RESERVED]: parseInt(reserved_count) || 0,
+          [SaleStatus.SHIPPED]: parseInt(shipped_count) || 0,
+          [SaleStatus.DELIVERED]: parseInt(delivered_count) || 0,
+          [SaleStatus.COMPLETED]: parseInt(completed_count) || 0,
+          [SaleStatus.CANCELLED]: parseInt(cancelled_count) || 0,
+        },
+        sales_by_period: {
+          today: parseInt(today_count) || 0,
+          this_week: parseInt(week_count) || 0,
+          this_month: parseInt(month_count) || 0,
+        }
+      }
     };
+  }
+
+  private buildWhereClause(filters: SalesHistoryFilterDto): string {
+    const conditions: string[] = [];
+    let paramIndex = 1;
+
+    if (filters.search) {
+      conditions.push(`(name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`);
+      paramIndex++;
+    }
+
+    if (filters.category_ids?.length) {
+      conditions.push(`category_id = ANY($${paramIndex})`);
+      paramIndex++;
+    } else if (filters.category_id) {
+      conditions.push(`category_id = $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.language_ids?.length) {
+      conditions.push(`language_id = ANY($${paramIndex})`);
+      paramIndex++;
+    } else if (filters.language_id) {
+      conditions.push(`language_id = $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.store_ids?.length) {
+      conditions.push(`store_id = ANY($${paramIndex})`);
+      paramIndex++;
+    } else if (filters.store_id) {
+      conditions.push(`store_id = $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.start_date) {
+      conditions.push(`created_at >= $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.end_date) {
+      conditions.push(`created_at <= $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.min_price !== undefined) {
+      conditions.push(`price >= $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.max_price !== undefined) {
+      conditions.push(`price <= $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.min_quantity !== undefined) {
+      conditions.push(`quantity >= $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.max_quantity !== undefined) {
+      conditions.push(`quantity <= $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.has_shipping_proof !== undefined) {
+      conditions.push(`shipping_proof_url IS ${filters.has_shipping_proof ? 'NOT NULL' : 'NULL'}`);
+    }
+
+    if (filters.has_delivery_proof !== undefined) {
+      conditions.push(`delivery_proof_url IS ${filters.has_delivery_proof ? 'NOT NULL' : 'NULL'}`);
+    }
+
+    if (filters.statuses?.length) {
+      conditions.push(`status = ANY($${paramIndex})`);
+      paramIndex++;
+    } else if (filters.status) {
+      conditions.push(`status = $${paramIndex}`);
+      paramIndex++;
+    }
+
+    if (filters.types?.length) {
+      conditions.push(`type = ANY($${paramIndex})`);
+      paramIndex++;
+    } else if (filters.type) {
+      conditions.push(`type = $${paramIndex}`);
+      paramIndex++;
+    }
+
+    return conditions.length ? conditions.join(' AND ') : '';
+  }
+
+  private buildQueryParameters(filters: SalesHistoryFilterDto, limit: number, skip: number): any[] {
+    const parameters: any[] = [];
+
+    if (filters.search) {
+      parameters.push(`%${filters.search}%`);
+    }
+
+    if (filters.category_ids?.length) {
+      parameters.push(filters.category_ids);
+    } else if (filters.category_id) {
+      parameters.push(filters.category_id);
+    }
+
+    if (filters.language_ids?.length) {
+      parameters.push(filters.language_ids);
+    } else if (filters.language_id) {
+      parameters.push(filters.language_id);
+    }
+
+    if (filters.store_ids?.length) {
+      parameters.push(filters.store_ids);
+    } else if (filters.store_id) {
+      parameters.push(filters.store_id);
+    }
+
+    if (filters.start_date) {
+      parameters.push(filters.start_date);
+    }
+
+    if (filters.end_date) {
+      parameters.push(filters.end_date);
+    }
+
+    if (filters.min_price !== undefined) {
+      parameters.push(filters.min_price);
+    }
+
+    if (filters.max_price !== undefined) {
+      parameters.push(filters.max_price);
+    }
+
+    if (filters.min_quantity !== undefined) {
+      parameters.push(filters.min_quantity);
+    }
+
+    if (filters.max_quantity !== undefined) {
+      parameters.push(filters.max_quantity);
+    }
+
+    if (filters.statuses?.length) {
+      parameters.push(filters.statuses);
+    } else if (filters.status) {
+      parameters.push(filters.status);
+    }
+
+    if (filters.types?.length) {
+      parameters.push(filters.types);
+    } else if (filters.type) {
+      parameters.push(filters.type);
+    }
+
+    parameters.push(limit, skip);
+
+    return parameters;
   }
 
   private async getCategoryInfo(categoryId: string) {
@@ -156,7 +360,7 @@ export class SalesHistoryService {
   }
 
   private getActiveSalesQuery(userId: string, filters: SalesHistoryFilterDto): SelectQueryBuilder<Sale> {
-    return this.dataSource
+    const query = this.dataSource
       .createQueryBuilder()
       .select([
         's.id',
@@ -176,15 +380,19 @@ export class SalesHistoryService {
         's.updated_at',
         'NULL as cancelled_at',
         's.completed_at',
-        'NULL as cancellation_reason'
+        'NULL as cancellation_reason',
+        's.shipping_proof_url',
+        's.delivery_proof_url'
       ])
       .from(Sale, 's')
       .where('s.seller_id = :userId OR s.buyer_id = :userId', { userId })
       .andWhere('s.status != :cancelledStatus', { cancelledStatus: SaleStatus.CANCELLED });
+
+    return query;
   }
 
   private getCancelledSalesQuery(userId: string, filters: SalesHistoryFilterDto): SelectQueryBuilder<any> {
-    return this.dataSource
+    const query = this.dataSource
       .createQueryBuilder()
       .select([
         'sc.id',
@@ -204,14 +412,18 @@ export class SalesHistoryService {
         'sc.updated_at',
         'sc.cancelled_at',
         'NULL as completed_at',
-        'sc.cancellation_reason'
+        'sc.cancellation_reason',
+        'sc.shipping_proof_url',
+        'sc.delivery_proof_url'
       ])
       .from('sales_cancelled', 'sc')
       .where('sc.seller_id = :userId OR sc.buyer_id = :userId', { userId });
+
+    return query;
   }
 
   private getPurchasesQuery(userId: string, filters: SalesHistoryFilterDto): SelectQueryBuilder<Purchase> {
-    return this.dataSource
+    const query = this.dataSource
       .createQueryBuilder()
       .select([
         'p.id',
@@ -231,9 +443,13 @@ export class SalesHistoryService {
         'p.created_at as updated_at',
         'NULL as cancelled_at',
         'p.created_at as completed_at',
-        'NULL as cancellation_reason'
+        'NULL as cancellation_reason',
+        'NULL as shipping_proof_url',
+        'NULL as delivery_proof_url'
       ])
       .from(Purchase, 'p')
       .where('p.user_id = :userId', { userId });
+
+    return query;
   }
 } 

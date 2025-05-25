@@ -8,8 +8,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CommentsService } from '../comments/comments.service';
-import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
-import { Platform, UserRole, SubscriptionTier, Channel } from '../common/headers/decorators/headers.decorator';
+import { Platform, Channel } from '../common/headers/decorators/headers.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('users')
@@ -19,7 +18,6 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly commentsService: CommentsService,
-    private readonly subscriptionValidationService: SubscriptionValidationService,
   ) {}
 
   @Post()
@@ -56,7 +54,15 @@ export class UsersController {
     const tier = await this.usersService.getCurrentTier(user.id);
     return {
       user: {
-        ...user,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        is_store: user.is_store,
+        google_id: user.google_id,
+        avatar_url: user.avatar_url,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
         tier,
       }
     };
@@ -65,8 +71,8 @@ export class UsersController {
   @Get('search')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Buscar usuarios por término, rol, paginación y offset' })
-  @ApiResponse({ status: 200, description: 'Usuarios encontrados.' })
+  @ApiOperation({ summary: 'Search users by term, role, pagination and offset' })
+  @ApiResponse({ status: 200, description: 'Users found.' })
   async searchUsers(@Request() req) {
     const { search, page = 1, limit = 20, offset, roles } = req.query;
     return this.usersService.searchUsers({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, roles });
@@ -91,8 +97,12 @@ export class UsersController {
   async update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
+    @Request() req,
     @UploadedFile() avatar?: Express.Multer.File
   ) {
+    if (req.user.id !== id && req.user.role !== Role.ADMIN) {
+      throw new ForbiddenException('You are not allowed to update this user');
+    }
     return this.usersService.update(id, updateUserDto, avatar);
   }
 
@@ -126,11 +136,10 @@ export class UsersController {
   async getProfileMetadata(
     @Request() req,
     @Platform() platform: string,
-    @UserRole() role: string,
-    @SubscriptionTier() tier: string,
     @Channel() channel: string,
   ) {
     const user = await this.usersService.findOne(req.user.id);
+    const tier = await this.usersService.getCurrentTier(user.id);
     
     return {
       user: {
@@ -138,11 +147,10 @@ export class UsersController {
         email: user.email,
         name: user.name,
         role: user.role,
+        tier,
       },
       metadata: {
         platform,
-        role,
-        tier,
         channel,
         requestTimestamp: new Date().toISOString(),
       },

@@ -36,7 +36,6 @@ export class AuthService {
         email: user.email,
         role: user.role,
         avatar_url: user.avatar_url,
-        current_subscription_id: user.current_subscription_id,
         tier,
       },
     };
@@ -49,6 +48,7 @@ export class AuthService {
     }
     const user = await this.usersService.create(registerDto);
     const payload = { sub: user.id, email: user.email, role: user.role };
+    const tier = await this.usersService.getCurrentTier(user.id);
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -57,7 +57,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         avatar_url: user.avatar_url,
-        current_subscription_id: user.current_subscription_id,
+        tier,
       },
     };
   }

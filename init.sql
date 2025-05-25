@@ -2,7 +2,7 @@
 
 
 CREATE DATABASE beyond_game_tcg;
-DROP TABLE IF EXISTS UserSubscriptions, SubscriptionPlans, Notifications, StoreSocialLinks, StoreRatings, UserRatings, Stores, Favorites, Purchases, Comments, Sales, Categories, Languages, Users;
+DROP TABLE IF EXISTS UserSubscriptions, SubscriptionPlans, Notifications, StoreSocialLinks, StoreRatings, UserRatings, Stores, Favorites, Purchases, Comments, Sales, SalesCancelled, Categories, Languages, Users;
 
 CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -121,7 +121,9 @@ CREATE TABLE Sales (
     price DECIMAL(10, 2) NOT NULL,
     image_url VARCHAR(255),
     quantity INTEGER NOT NULL CHECK (quantity >= 0),
-    status VARCHAR(20) DEFAULT 'available',
+    original_quantity INTEGER NOT NULL CHECK (original_quantity >= quantity),
+    parent_sale_id UUID REFERENCES Sales(id) ON DELETE SET NULL,
+    status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'shipped', 'delivered', 'completed', 'cancelled')),
     views INTEGER DEFAULT 0,
     category_id UUID REFERENCES Categories(id) NOT NULL,
     language_id UUID REFERENCES Languages(id) NOT NULL,
@@ -133,6 +135,27 @@ CREATE TABLE Sales (
     completed_at TIMESTAMP,
     cancelled_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT now()
+);
+
+CREATE TABLE SalesCancelled (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_sale_id UUID REFERENCES Sales(id) ON DELETE SET NULL,
+    parent_sale_id UUID REFERENCES Sales(id) ON DELETE SET NULL,
+    seller_id UUID REFERENCES Users(id) ON DELETE CASCADE,
+    buyer_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    store_id UUID REFERENCES Stores(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    image_url VARCHAR(255),
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
+    original_quantity INTEGER NOT NULL CHECK (original_quantity >= quantity),
+    category_id UUID REFERENCES Categories(id) NOT NULL,
+    language_id UUID REFERENCES Languages(id) NOT NULL,
+    cancellation_reason TEXT,
+    cancelled_at TIMESTAMP NOT NULL DEFAULT now(),
+    created_at TIMESTAMP NOT NULL,
+    original_status VARCHAR(20) NOT NULL
 );
 
 CREATE TABLE comments (
@@ -240,6 +263,13 @@ CREATE INDEX idx_userbadges_expires_at ON UserBadges(expires_at);
 CREATE INDEX idx_storebadges_store_id ON StoreBadges(store_id);
 CREATE INDEX idx_storebadges_badge_id ON StoreBadges(badge_id);
 CREATE INDEX idx_storebadges_expires_at ON StoreBadges(expires_at);
+
+-- Índices adicionales para SalesCancelled
+CREATE INDEX idx_sales_cancelled_seller_id ON SalesCancelled(seller_id);
+CREATE INDEX idx_sales_cancelled_store_id ON SalesCancelled(store_id);
+CREATE INDEX idx_sales_cancelled_cancelled_at ON SalesCancelled(cancelled_at);
+CREATE INDEX idx_sales_parent_sale_id ON Sales(parent_sale_id);
+CREATE INDEX idx_sales_cancelled_parent_sale_id ON SalesCancelled(parent_sale_id);
 
 -- Datos iniciales de categorías e idiomas (puedes copiar los que ya tienes)
 

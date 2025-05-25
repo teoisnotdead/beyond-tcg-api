@@ -116,7 +116,9 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         price DECIMAL(10, 2) NOT NULL,
         image_url VARCHAR(255),
         quantity INTEGER NOT NULL CHECK (quantity >= 0),
-        status VARCHAR(20) DEFAULT 'available',
+        original_quantity INTEGER NOT NULL CHECK (original_quantity >= quantity),
+        parent_sale_id UUID REFERENCES sales(id) ON DELETE SET NULL,
+        status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'shipped', 'delivered', 'completed', 'cancelled')),
         views INTEGER DEFAULT 0,
         category_id UUID REFERENCES categories(id) NOT NULL,
         language_id UUID REFERENCES languages(id) NOT NULL,
@@ -128,6 +130,29 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         completed_at TIMESTAMP,
         cancelled_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT now()
+      );
+    `);
+
+    await queryRunner.query(`
+      CREATE TABLE sales_cancelled (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        original_sale_id UUID REFERENCES sales(id) ON DELETE SET NULL,
+        parent_sale_id UUID REFERENCES sales(id) ON DELETE SET NULL,
+        seller_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        buyer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description VARCHAR(100) NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
+        image_url VARCHAR(255),
+        quantity INTEGER NOT NULL CHECK (quantity >= 0),
+        original_quantity INTEGER NOT NULL CHECK (original_quantity >= quantity),
+        category_id UUID REFERENCES categories(id) NOT NULL,
+        language_id UUID REFERENCES languages(id) NOT NULL,
+        cancellation_reason TEXT,
+        cancelled_at TIMESTAMP NOT NULL DEFAULT now(),
+        created_at TIMESTAMP NOT NULL,
+        original_status VARCHAR(20) NOT NULL
       );
     `);
 
@@ -470,21 +495,46 @@ export class InitialMigration1716220000000 implements MigrationInterface {
           is_active = EXCLUDED.is_active,
           updated_at = now();
     `);
+
+    // Agregar índices para sales_cancelled
+    await queryRunner.query(`
+      CREATE INDEX idx_sales_cancelled_seller_id ON sales_cancelled(seller_id);
+      CREATE INDEX idx_sales_cancelled_store_id ON sales_cancelled(store_id);
+      CREATE INDEX idx_sales_cancelled_cancelled_at ON sales_cancelled(cancelled_at);
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Aquí irían los DROP TABLE y DROP INDEX en orden inverso
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_storebadges_expires_at`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_storebadges_badge_id`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_storebadges_store_id`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_userbadges_expires_at`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_userbadges_badge_id`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_userbadges_user_id`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_badges_is_active`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_badges_category`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_badges_type`);
-    await queryRunner.query(`DROP TABLE IF EXISTS storebadges`);
-    await queryRunner.query(`DROP TABLE IF EXISTS userbadges`);
-    await queryRunner.query(`DROP TABLE IF EXISTS badges`);
+    // Eliminar índices de sales_cancelled
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_sales_cancelled_cancelled_at`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_sales_cancelled_store_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_sales_cancelled_seller_id`);
+    
+    // Eliminar tablas
+    await queryRunner.query(`DROP TABLE IF EXISTS sales_cancelled`);
+    await queryRunner.query(`DROP TABLE IF EXISTS purchases`);
+    await queryRunner.query(`DROP TABLE IF EXISTS sales`);
+    await queryRunner.query(`DROP TABLE IF EXISTS favorites`);
+    await queryRunner.query(`DROP TABLE IF EXISTS comments`);
+    await queryRunner.query(`DROP TABLE IF EXISTS storesociallinks`);
+    await queryRunner.query(`DROP TABLE IF EXISTS stores`);
+    await queryRunner.query(`DROP TABLE IF EXISTS languages`);
+    await queryRunner.query(`DROP TABLE IF EXISTS categories`);
+    await queryRunner.query(`DROP TABLE IF EXISTS usersubscriptions`);
+    await queryRunner.query(`DROP TABLE IF EXISTS subscriptionplans`);
+    await queryRunner.query(`DROP TABLE IF EXISTS users`);
+
+    // Eliminar índices
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_notifications_created_at`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_notifications_is_read`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_notifications_user_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_usersubscriptions_is_active`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_usersubscriptions_end_date`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_usersubscriptions_user_id`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_languages_display_order`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_languages_slug`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_categories_display_order`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_categories_slug`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_users_email`);
   }
 }

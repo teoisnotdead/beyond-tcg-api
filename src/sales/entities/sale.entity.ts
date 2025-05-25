@@ -1,8 +1,17 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { Store } from '../../stores/entities/store.entity'; // Si tienes stores
 import { Category } from '../../categories/entities/category.entity';
 import { Language } from '../../languages/entities/language.entity';
+import { Store } from '../../stores/entities/store.entity';
+
+export enum SaleStatus {
+  AVAILABLE = 'available',
+  RESERVED = 'reserved',
+  SHIPPED = 'shipped',
+  DELIVERED = 'delivered',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
 
 @Entity('sales')
 export class Sale {
@@ -19,6 +28,10 @@ export class Sale {
 
   @Column({ nullable: true })
   buyer_id?: string;
+
+  @ManyToOne(() => Store, { nullable: true })
+  @JoinColumn({ name: 'store_id' })
+  store: Store;
 
   @Column({ nullable: true })
   store_id?: string;
@@ -38,8 +51,12 @@ export class Sale {
   @Column()
   quantity: number;
 
-  @Column({ default: 'available' })
-  status: string;
+  @Column({
+    type: 'enum',
+    enum: SaleStatus,
+    default: SaleStatus.AVAILABLE
+  })
+  status: SaleStatus;
 
   @Column({ default: 0 })
   views: number;
@@ -72,6 +89,16 @@ export class Sale {
 
   @Column({ nullable: true, type: 'timestamp' })
   cancelled_at?: Date;
+
+  @Column()
+  original_quantity: number;
+
+  @Column({ nullable: true })
+  parent_sale_id?: string;
+
+  @ManyToOne(() => Sale, { nullable: true })
+  @JoinColumn({ name: 'parent_sale_id' })
+  parent_sale?: Sale;
 
   @CreateDateColumn()
   created_at: Date;

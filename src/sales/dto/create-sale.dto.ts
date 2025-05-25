@@ -1,5 +1,6 @@
 import { IsString, IsNumber, IsOptional, IsUUID, Min, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { SaleStatus } from '../entities/sale.entity';
 
 export class CreateSaleDto {
   @IsString()
@@ -23,8 +24,8 @@ export class CreateSaleDto {
   quantity: number;
 
   @IsOptional()
-  @IsEnum(['available', 'sold', 'reserved'])
-  status?: string;
+  @IsEnum(SaleStatus)
+  status?: SaleStatus;
 
   @IsUUID()
   category_id: string;

@@ -5,7 +5,7 @@ import { Store } from '../stores/entities/store.entity';
 import { User } from '../users/entities/user.entity';
 import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
-import { Sale } from '../sales/entities/sale.entity';
+import { Sale, SaleStatus } from '../sales/entities/sale.entity';
 
 @Injectable()
 export class FeaturedService {
@@ -55,7 +55,7 @@ export class FeaturedService {
     const featuredStores = await Promise.all(stores.map(async (store) => {
       const sales = await this.salesRepository.find({ where: { store_id: store.id } });
       const totalViews = sales.reduce((acc, s) => acc + (s.views || 0), 0);
-      const activeSales = sales.filter(s => s.status === 'active').length;
+      const activeSales = sales.filter(s => s.status === SaleStatus.AVAILABLE).length;
       return {
         id: store.id,
         name: store.name,
@@ -72,7 +72,7 @@ export class FeaturedService {
     const featuredUsers = await Promise.all(proUsers.map(async (user) => {
       const sales = await this.salesRepository.find({ where: { seller: { id: user.id } } });
       const totalViews = sales.reduce((acc, s) => acc + (s.views || 0), 0);
-      const activeSales = sales.filter(s => s.status === 'active').length;
+      const activeSales = sales.filter(s => s.status === SaleStatus.AVAILABLE).length;
       return {
         id: user.id,
         name: user.name,

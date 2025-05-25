@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Purchase } from './entities/purchase.entity';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
-import { Sale } from '../sales/entities/sale.entity';
+import { Sale, SaleStatus } from '../sales/entities/sale.entity';
 import { User } from '../users/entities/user.entity';
 
 @Injectable()
@@ -21,7 +21,9 @@ export class PurchasesService {
       relations: ['seller', 'category', 'language'],
     });
     if (!sale) throw new NotFoundException('Sale not found');
-    if (sale.status !== 'available' && sale.status !== 'reserved' && sale.status !== 'shipped') {
+    if (sale.status !== SaleStatus.AVAILABLE && 
+        sale.status !== SaleStatus.RESERVED && 
+        sale.status !== SaleStatus.SHIPPED) {
       throw new BadRequestException('Sale is not available for purchase');
     }
     if (sale.quantity < createPurchaseDto.quantity) {
@@ -31,7 +33,7 @@ export class PurchasesService {
     // Update sale quantity and status
     sale.quantity -= createPurchaseDto.quantity;
     if (sale.quantity === 0) {
-      sale.status = 'sold';
+      sale.status = SaleStatus.COMPLETED;
     }
     await this.salesRepository.save(sale);
 

@@ -8,6 +8,8 @@ import { PurchasesModule } from '../purchases/purchases.module';
 import { CommentsModule } from '../comments/comments.module';
 import { UsersModule } from '../users/users.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { SalesStateService } from './sales-state.service';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sale]),
@@ -17,8 +19,11 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     CommentsModule,
     CloudinaryModule,
   ],
-  providers: [SalesService],
+  providers: [
+    SalesService,
+    SalesStateService,
+  ],
   controllers: [SalesController],
-  exports: [SalesService],
+  exports: [SalesService, SalesStateService],
 })
 export class SalesModule {}

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Sale } from './entities/sale.entity';
+import { Repository, DeepPartial } from 'typeorm';
+import { Sale, SaleStatus } from './entities/sale.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { PurchasesService } from '../purchases/purchases.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -44,7 +44,7 @@ export class SalesService {
     return this.salesRepository.count({
       where: {
         seller: { id: userId },
-        status: 'available',
+        status: SaleStatus.AVAILABLE,
       },
     });
   }
@@ -60,10 +60,11 @@ export class SalesService {
       const sale = this.salesRepository.create({
         ...createSaleDto,
         seller: { id: userId },
-        status: createSaleDto.status || 'available',
+        status: SaleStatus.AVAILABLE,
         image_url: imageUrl,
         category: { id: createSaleDto.category_id },
         language: { id: createSaleDto.language_id },
+        original_quantity: createSaleDto.quantity
       });
       return await this.salesRepository.save(sale);
     } catch (error) {
@@ -86,7 +87,7 @@ export class SalesService {
       .leftJoinAndSelect('sale.seller', 'seller')
       .leftJoinAndSelect('sale.category', 'category')
       .leftJoinAndSelect('sale.language', 'language')
-      .andWhere('sale.status = :status', { status: 'available' });
+      .andWhere('sale.status = :status', { status: SaleStatus.AVAILABLE });
 
     // Filter by category
     if (filters.categories) {
@@ -160,11 +161,11 @@ export class SalesService {
     });
     
     if (!sale) throw new NotFoundException('Sale not found');
-    if (sale.status !== 'available') throw new BadRequestException('Sale is not available');
+    if (sale.status !== SaleStatus.AVAILABLE) throw new BadRequestException('Sale is not available');
     if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot reserve your own sale');
     if (sale.buyer_id) throw new BadRequestException('Sale is already reserved by another user');
     
-    sale.status = 'reserved';
+    sale.status = SaleStatus.RESERVED;
     sale.buyer_id = buyerId;
     sale.reserved_at = new Date();
     await this.salesRepository.save(sale);
@@ -179,10 +180,10 @@ export class SalesService {
     
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id !== sellerId) throw new ForbiddenException('Only the seller can mark the sale as shipped');
-    if (sale.status !== 'reserved') throw new BadRequestException('Sale must be reserved before shipping');
+    if (sale.status !== SaleStatus.RESERVED) throw new BadRequestException('Sale must be reserved before shipping');
     if (!sale.buyer_id) throw new BadRequestException('Sale must have a buyer to be shipped');
     
-    sale.status = 'shipped';
+    sale.status = SaleStatus.SHIPPED;
     sale.shipping_proof_url = shippingProofUrl;
     sale.shipped_at = new Date();
     await this.salesRepository.save(sale);
@@ -197,10 +198,10 @@ export class SalesService {
     
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot confirm delivery of your own sale');
-    if (sale.status !== 'shipped') throw new BadRequestException('Sale must be shipped before confirming delivery');
+    if (sale.status !== SaleStatus.SHIPPED) throw new BadRequestException('Sale must be shipped before confirming delivery');
     if (sale.buyer_id !== buyerId) throw new ForbiddenException('Only the buyer can confirm delivery');
     
-    sale.status = 'completed';
+    sale.status = SaleStatus.COMPLETED;
     sale.delivery_proof_url = deliveryProofUrl;
     sale.completed_at = new Date();
     await this.salesRepository.save(sale);
@@ -223,7 +224,7 @@ export class SalesService {
     if (!sale) throw new NotFoundException('Sale not found');
     
     // Solo permitir cancelar si está reservada
-    if (sale.status !== 'reserved') {
+    if (sale.status !== SaleStatus.RESERVED) {
       throw new BadRequestException('Only reserved sales can be cancelled');
     }
     
@@ -232,7 +233,7 @@ export class SalesService {
       throw new ForbiddenException('Only the seller or buyer can cancel this sale');
     }
     
-    sale.status = 'cancelled';
+    sale.status = SaleStatus.CANCELLED;
     sale.cancelled_at = new Date();
     // No limpiamos el buyer_id para mantener el historial
     await this.salesRepository.save(sale);
@@ -261,7 +262,7 @@ export class SalesService {
       .leftJoinAndSelect('sale.seller', 'seller')
       .leftJoinAndSelect('sale.category', 'category')
       .leftJoinAndSelect('sale.language', 'language')
-      .andWhere('sale.status = :status', { status: 'available' });
+      .andWhere('sale.status = :status', { status: SaleStatus.AVAILABLE });
     if (categoryIds && categoryIds.length > 0) {
       qb.andWhere('sale.category_id IN (:...categoryIds)', { categoryIds });
     }
@@ -317,54 +318,43 @@ export class SalesService {
     }
   }
 
-  async relistSale(saleId: string, sellerId: string, updateData?: Partial<CreateSaleDto>) {
-    // Buscar la venta original
-    const originalSale = await this.salesRepository.findOne({
+  async relistSale(saleId: string, userId: string, updateData?: Partial<CreateSaleDto>): Promise<Sale> {
+    const sale = await this.salesRepository.findOne({ 
       where: { id: saleId },
+      relations: ['seller', 'buyer', 'category', 'language'] 
+    });
+    
+    if (!sale) throw new NotFoundException('Sale not found');
+    if (sale.seller.id !== userId) throw new ForbiddenException('Only the seller can relist the sale');
+    if (sale.status !== SaleStatus.CANCELLED) throw new BadRequestException('Only cancelled sales can be relisted');
+    
+    const newSaleData: DeepPartial<Sale> = {
+      seller: { id: sale.seller.id },
+      store_id: sale.store_id,
+      name: updateData?.name || sale.name,
+      description: updateData?.description || sale.description,
+      price: updateData?.price || sale.price,
+      image_url: sale.image_url,
+      quantity: updateData?.quantity || sale.quantity,
+      original_quantity: updateData?.quantity || sale.quantity,
+      status: SaleStatus.AVAILABLE,
+      category: sale.category ? { id: sale.category.id } : undefined,
+      language: sale.language ? { id: sale.language.id } : undefined,
+      views: 0
+    };
+
+    const newSale = this.salesRepository.create(newSaleData);
+    const savedSale = await this.salesRepository.save(newSale);
+    
+    const reloadedSale = await this.salesRepository.findOne({
+      where: { id: savedSale.id },
       relations: ['seller', 'category', 'language']
     });
 
-    if (!originalSale) {
-      throw new NotFoundException('Original sale not found');
+    if (!reloadedSale) {
+      throw new Error('Failed to reload sale after creation');
     }
 
-    // Verificar que la venta esté cancelada
-    if (originalSale.status !== 'cancelled') {
-      throw new BadRequestException('Only cancelled sales can be relisted');
-    }
-
-    // Verificar que el usuario sea el vendedor original
-    if (originalSale.seller.id !== sellerId) {
-      throw new ForbiddenException('Only the original seller can relist this sale');
-    }
-
-    // Crear nueva venta basada en la original
-    const newSale = this.salesRepository.create({
-      seller: { id: sellerId },
-      store_id: originalSale.store_id,
-      name: updateData?.name || originalSale.name,
-      description: updateData?.description || originalSale.description,
-      price: updateData?.price || originalSale.price,
-      image_url: originalSale.image_url, // Mantener la misma imagen
-      quantity: updateData?.quantity || originalSale.quantity,
-      status: 'available',
-      category: { id: updateData?.category_id || originalSale.category.id },
-      language: { id: updateData?.language_id || originalSale.language.id },
-      views: 0, // Resetear vistas
-      // No copiamos los campos de comprobantes ni timestamps
-    });
-
-    // Guardar la nueva venta
-    const savedSale = await this.salesRepository.save(newSale);
-
-    return {
-      message: 'Sale relisted successfully',
-      data: {
-        ...savedSale,
-        seller: { id: savedSale.seller.id },
-        category: savedSale.category ? { id: savedSale.category.id } : null,
-        language: savedSale.language ? { id: savedSale.language.id } : null,
-      }
-    };
+    return reloadedSale;
   }
 }

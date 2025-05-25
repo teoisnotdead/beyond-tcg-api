@@ -8,6 +8,9 @@ import { SubscriptionValidationService } from '../subscriptions/subscription-val
 import { CommentsService } from '../comments/comments.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateSaleDto } from './dto/update-sale.dto';
+import { SalesStateService } from './sales-state.service';
+import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
+import { Sale } from './entities/sale.entity';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -22,6 +25,7 @@ export class SalesController {
     private readonly salesService: SalesService,
     private readonly subscriptionValidationService: SubscriptionValidationService,
     private readonly commentsService: CommentsService,
+    private readonly salesStateService: SalesStateService,
   ) {}
 
   @Post()
@@ -64,38 +68,60 @@ export class SalesController {
 
   @Post(':id/reserve')
   @ApiOperation({ summary: 'Reserve a sale' })
-  async reserveSale(@Param('id') id: string, @Request() req: AuthRequest) {
-    // Only the buyer can reserve
-    return this.salesService.reserveSale(id, req.user.id);
+  @ApiResponse({ status: 200, description: 'Sale reserved successfully', type: Sale })
+  async reserveSale(
+    @Param('id') id: string,
+    @Body() dto: ReserveSaleDto,
+    @Request() req,
+  ): Promise<Sale> {
+    dto.saleId = id;
+    return this.salesStateService.reserveSale(dto, req.user.id);
   }
 
   @Post(':id/ship')
   @ApiOperation({ summary: 'Mark sale as shipped' })
+  @ApiResponse({ status: 200, description: 'Sale marked as shipped successfully', type: Sale })
   async shipSale(
     @Param('id') id: string,
-    @Request() req: AuthRequest,
-    @Body('shipping_proof_url') shippingProofUrl: string
-  ) {
-    // Only the seller can mark as shipped
-    return this.salesService.shipSale(id, req.user.id, shippingProofUrl);
+    @Body() dto: ShipSaleDto,
+    @Request() req,
+  ): Promise<Sale> {
+    dto.saleId = id;
+    return this.salesStateService.shipSale(dto, req.user.id);
   }
 
   @Post(':id/confirm-delivery')
-  @ApiOperation({ summary: 'Confirm delivery of sale' })
+  @ApiOperation({ summary: 'Confirm sale delivery' })
+  @ApiResponse({ status: 200, description: 'Delivery confirmed successfully', type: Sale })
   async confirmDelivery(
     @Param('id') id: string,
-    @Request() req: AuthRequest,
-    @Body('delivery_proof_url') deliveryProofUrl: string
-  ) {
-    // Only the buyer can confirm delivery
-    return this.salesService.confirmDelivery(id, req.user.id, deliveryProofUrl);
+    @Body() dto: ConfirmDeliveryDto,
+    @Request() req,
+  ): Promise<Sale> {
+    dto.saleId = id;
+    return this.salesStateService.confirmDelivery(dto, req.user.id);
+  }
+
+  @Post(':id/complete')
+  @ApiOperation({ summary: 'Complete a sale' })
+  @ApiResponse({ status: 200, description: 'Sale completed successfully', type: Sale })
+  async completeSale(
+    @Param('id') id: string,
+    @Request() req,
+  ): Promise<Sale> {
+    return this.salesStateService.completeSale(id, req.user.id);
   }
 
   @Post(':id/cancel')
-  @ApiOperation({ summary: 'Cancel sale' })
-  async cancelSale(@Param('id') id: string, @Request() req: AuthRequest) {
-    // Seller or buyer can cancel if status is reserved
-    return this.salesService.cancelSale(id, req.user.id);
+  @ApiOperation({ summary: 'Cancel a sale' })
+  @ApiResponse({ status: 200, description: 'Sale cancelled successfully', type: Sale })
+  async cancelSale(
+    @Param('id') id: string,
+    @Body() dto: CancelSaleDto,
+    @Request() req,
+  ): Promise<Sale> {
+    dto.saleId = id;
+    return this.salesStateService.cancelSale(dto, req.user.id);
   }
 
   @Get(':id/comments')

@@ -14,7 +14,6 @@ import { Sale, SaleStatus } from './entities/sale.entity';
 import { SalesHistoryService } from './services/sales-history.service';
 import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from './dto/sales-history-filter.dto';
 import { HistoryItem } from './interfaces/history-item.interface';
-import { HistoryItemSchema } from './interfaces/history-item.schema';
 import { SalesTransitionRulesService } from './services/sales-transition-rules.service';
 import { SalesMetricsService } from './services/sales-metrics.service';
 import { SalesMetricsDto } from './dto/sales-metrics.dto';
@@ -50,6 +49,9 @@ export class SalesController {
     @Body() createSaleDto: CreateSaleDto,
     @UploadedFile() image: Express.Multer.File
   ) {
+    if (!image) {
+      throw new BadRequestException('The image is required');
+    }
     const canCreate = await this.subscriptionValidationService.canCreateSale(req.user.id);
     if (!canCreate) {
       throw new ForbiddenException('You have reached the limit of active sales according to your subscription plan.');
@@ -161,9 +163,9 @@ export class SalesController {
     @Body() updateSaleDto: UpdateSaleDto,
     @UploadedFile() image?: Express.Multer.File
   ) {
-    // Aquí podrías validar que el usuario sea el vendedor
     return this.salesService.update(id, req.user.id, updateSaleDto, image);
   }
+
 
   @Post(':id/relist')
   @ApiOperation({ summary: 'Relist a cancelled sale' })
@@ -366,49 +368,49 @@ export class SalesController {
 
   @Get('reports')
   @ApiOperation({ 
-    summary: 'Obtener reportes básicos de ventas',
-    description: 'Retorna reportes detallados de ventas incluyendo métricas por período, categoría, tienda y estados'
+    summary: 'Get basic sales reports',
+    description: 'Returns detailed sales reports including metrics by period, category, store, and status'
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Reportes generados exitosamente',
+    description: 'Reports generated successfully',
     type: SalesReportDto
   })
   @ApiQuery({ 
     name: 'start_date', 
     required: false, 
     type: Date, 
-    description: 'Fecha de inicio del reporte (ISO format)' 
+    description: 'Start date for the report (ISO format)' 
   })
   @ApiQuery({ 
     name: 'end_date', 
     required: false, 
     type: Date, 
-    description: 'Fecha de fin del reporte (ISO format)' 
+    description: 'End date for the report (ISO format)' 
   })
   @ApiQuery({ 
     name: 'category_ids', 
     required: false, 
     type: [String], 
-    description: 'IDs de categorías a incluir' 
+    description: 'IDs of categories to include' 
   })
   @ApiQuery({ 
     name: 'store_ids', 
     required: false, 
     type: [String], 
-    description: 'IDs de tiendas a incluir' 
+    description: 'IDs of stores to include' 
   })
   @ApiQuery({ 
     name: 'group_by', 
     required: false, 
     enum: ['day', 'week', 'month'],
-    description: 'Agrupar por día/semana/mes' 
+    description: 'Group by day/week/month' 
   })
   @ApiQuery({ 
     name: 'limit', 
     required: false, 
     type: Number,
-    description: 'Límite de resultados para categorías/tiendas' 
+    description: 'Limit of results for categories/stores' 
   })
   async getSalesReports(
     @Request() req,

@@ -27,7 +27,6 @@ interface AuthRequest extends ExpressRequest {
 @ApiTags('sales')
 @ApiBearerAuth()
 @Controller('sales')
-@UseGuards(JwtAuthGuard)
 export class SalesController {
   constructor(
     private readonly salesService: SalesService,
@@ -41,6 +40,7 @@ export class SalesController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Create a new sale' })
   @ApiResponse({ status: 201, description: 'Sale created successfully.' })
@@ -75,6 +75,7 @@ export class SalesController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete sale' })
   @ApiResponse({ status: 200, description: 'Sale deleted successfully.' })
   remove(@Param('id') id: string) {
@@ -82,6 +83,7 @@ export class SalesController {
   }
 
   @Post(':id/reserve')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Reserve a sale' })
   @ApiResponse({ status: 200, description: 'Sale reserved successfully', type: Sale })
   async reserveSale(
@@ -94,6 +96,7 @@ export class SalesController {
   }
 
   @Post(':id/ship')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Mark sale as shipped' })
   @ApiResponse({ status: 200, description: 'Sale marked as shipped successfully', type: Sale })
   async shipSale(
@@ -106,6 +109,7 @@ export class SalesController {
   }
 
   @Post(':id/confirm-delivery')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Confirm sale delivery' })
   @ApiResponse({ status: 200, description: 'Delivery confirmed successfully', type: Sale })
   async confirmDelivery(
@@ -118,6 +122,7 @@ export class SalesController {
   }
 
   @Post(':id/complete')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Complete a sale' })
   @ApiResponse({ status: 200, description: 'Sale completed successfully', type: Sale })
   async completeSale(
@@ -128,6 +133,7 @@ export class SalesController {
   }
 
   @Post(':id/cancel')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Cancel a sale' })
   @ApiResponse({ status: 200, description: 'Sale cancelled successfully', type: Sale })
   async cancelSale(
@@ -154,6 +160,7 @@ export class SalesController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Update a sale' })
   @ApiResponse({ status: 200, description: 'Sale updated successfully.' })
@@ -166,8 +173,8 @@ export class SalesController {
     return this.salesService.update(id, req.user.id, updateSaleDto, image);
   }
 
-
   @Post(':id/relist')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Relist a cancelled sale' })
   @ApiResponse({ status: 201, description: 'Sale relisted successfully.' })
   async relistSale(

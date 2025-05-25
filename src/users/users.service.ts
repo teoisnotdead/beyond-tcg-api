@@ -187,4 +187,14 @@ export class UsersService {
       throw error;
     }
   }
+
+  async getCurrentTier(userId: string): Promise<string | null> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user?.current_subscription_id) return null;
+    const userSubscription = await this.userSubscriptionsRepository.findOne({
+      where: { id: user.current_subscription_id, is_active: true },
+      relations: ['plan'],
+    });
+    return userSubscription?.plan?.tier || null;
+  }
 }

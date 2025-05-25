@@ -89,7 +89,7 @@ export class SalesService {
       .leftJoinAndSelect('sale.language', 'language')
       .andWhere('sale.status = :status', { status: SaleStatus.AVAILABLE });
 
-    // Filter by category
+    // Filter by categories
     if (filters.categories) {
       const categoryIds = Array.isArray(filters.categories)
         ? filters.categories
@@ -97,11 +97,11 @@ export class SalesService {
       qb.andWhere('sale.category_id IN (:...categoryIds)', { categoryIds });
     }
 
-    // Filter by language
-    if (filters.language_id) {
-      const languageIds = Array.isArray(filters.language_id)
-        ? filters.language_id
-        : filters.language_id.split(',');
+    // Filter by languages
+    if (filters.languages) {
+      const languageIds = Array.isArray(filters.languages)
+        ? filters.languages
+        : filters.languages.split(',');
       qb.andWhere('sale.language_id IN (:...languageIds)', { languageIds });
     }
 

@@ -51,8 +51,15 @@ export class UsersController {
   @ApiOperation({ summary: 'Get authenticated user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getProfile(@Request() req) {
-    return this.usersService.findOne(req.user.id);
+  async getProfile(@Request() req) {
+    const user = await this.usersService.findOne(req.user.id);
+    const tier = await this.usersService.getCurrentTier(user.id);
+    return {
+      user: {
+        ...user,
+        tier,
+      }
+    };
   }
 
   @Get('search')
@@ -130,6 +137,7 @@ export class UsersController {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
       metadata: {
         platform,

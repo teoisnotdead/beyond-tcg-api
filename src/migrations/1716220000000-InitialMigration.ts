@@ -29,6 +29,7 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         price DECIMAL(10, 2) NOT NULL,
         duration_days INTEGER NOT NULL,
         description TEXT,
+        tier VARCHAR(50),
         features JSONB,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT now(),

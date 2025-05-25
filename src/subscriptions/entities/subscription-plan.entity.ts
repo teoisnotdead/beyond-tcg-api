@@ -17,6 +17,9 @@ export class SubscriptionPlan {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ nullable: true })
+  tier: string;
+
   @Column({ type: 'jsonb', nullable: true })
   features: any;
 

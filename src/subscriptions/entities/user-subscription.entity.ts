@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { SubscriptionPlan } from './subscription-plan.entity';
 
 @Entity('usersubscriptions')
 export class UserSubscription {
@@ -10,6 +11,10 @@ export class UserSubscription {
 
   @Column()
   plan_id: string;
+
+  @ManyToOne(() => SubscriptionPlan)
+  @JoinColumn({ name: 'plan_id' })
+  plan: SubscriptionPlan;
 
   @Column({ type: 'timestamp' })
   start_date: Date;

@@ -1,185 +1,78 @@
 # 🗺️ Roadmap de Desarrollo
 
-## 1. Configuración Inicial
-- ✅ Crear archivo .env con variables esenciales
-- ✅ Instalar dependencias faltantes
-- ✅ Configurar TypeORM para PostgreSQL
-- ✅ Implementar sistema de migraciones y datos iniciales
+## 1. Funcionalidad Core
+- ✅ Autenticación y registro de usuarios
+- ✅ Perfiles de usuario y roles
+- ✅ Gestión de tiendas
+- ✅ Gestión de productos/ventas
+- ✅ Gestión de compras
+- ✅ Módulos de categorías e idiomas
+- ✅ Módulos de comentarios, favoritos y ratings
 
-## 2. Módulos Básicos
-- ✅ Crear estructura de carpetas para módulos
-- ✅ Implementar módulo de autenticación
-- ✅ Configurar middleware de JWT
-- ✅ Implementar módulo de usuarios
-
-## 3. Funcionalidades Core
-- ✅ Implementar OAuth2 con Google
-- ✅ Configurar Cloudinary para imágenes
-- ✅ Implementar sistema de suscripciones con planes escalonados (Free, Pro, Tienda)
-  - ✅ Lógica de límites de ventas por plan
-  - ✅ Validación de creación de tienda según plan
-  - ✅ Branding, estadísticas y destacados según plan (estructura y features en migración)
-- ✅ Configurar WebSockets para notificaciones
-- ✅ Refactorizar notificaciones para internacionalización (i18n) y manejo de metadata
-- ✅ Estandarizar respuestas de API (interceptor global)
-- ✅ Validación avanzada de headers y ambientes
-
-## 4. Módulos de Entidades
-- ✅ Implementar módulos para tiendas (stores)
-- ✅ Implementar módulos para ventas
-- ✅ Implementar módulos para compras
-- ✅ Implementar módulos para categorías/idiomas
-- ✅ Implementar módulos para comentarios
-- ✅ Implementar módulo de favoritos
-- ✅ Implementar paginación flexible y filtros avanzados en endpoints principales
-- ✅ Implementar endpoints de búsqueda avanzada (texto libre, filtros, paginación)
-
-## 5. Reputación, Badges y Destacados
-- ✅ Implementar sistema de reputación para usuarios y tiendas (ratings por transacción, validaciones y promedio)
-- ✅ Implementar endpoints y lógica para destacados en home (usuarios y tiendas)
-- ✅ Implementar sistema de badges (insignias) para usuarios y tiendas (estructura, endpoints, asignación automática y documentación)
-
-## 6. Documentación y Finalización
-- ✅ Configurar Swagger para API docs
-- ✅ Implementar validaciones
-- ✅ Configurar tareas programadas (cron jobs, expiración de suscripciones, etc.)
-- ✅ Mejora en manejo de errores
-- ✅ Refactorización de notificaciones para i18n y metadata
-- ✅ Estandarización de respuestas de API
-- ⬜ Testing y optimización
-  - ⬜ Tests unitarios
-  - ⬜ Tests e2e
-  - ✅ Optimización de queries
-  - ⬜ Implementación de cache
-  - ⬜ Documentación adicional de endpoints 
-
-## 7. Mejora en Gestión de Ventas
-- ✅ Implementar gestión de estados de ventas
+## 2. Flujo de Ventas y Compras
+- ✅ Gestión de estados de ventas (reservar, enviar, entregar, cancelar, etc.)
   - ✅ Crear tabla sales_cancelled
-  - ✅ Modificar tabla sales para solo almacenar ventas activas (estados available, reserved, shipped)
+  - ✅ Modificar tabla sales para solo almacenar ventas activas
   - ✅ Actualizar servicio de ventas para transiciones de estado
   - ✅ Implementar lógica de cancelación con registro de razones
-- ✅ Implementar endpoint unificado de historial de ventas
-  - ✅ Crear sistema flexible de filtrado
-  - ✅ Implementar paginación
-  - ✅ Agregar filtrado por estado
-  - ✅ Optimizar queries para rendimiento
-- ⬜ Mejorar Gestión de Compras
-  - ⬜ Implementar endpoint de vista detallada de compras
-    - ⬜ Agregar información completa de la compra
-    - ⬜ Incluir historial de estados de la venta
-    - ⬜ Agregar comentarios relacionados
-    - ⬜ Integrar notificaciones
-    - ⬜ Agregar información de envío
-  - ⬜ Mejorar endpoints de compras existentes
-    - ⬜ Agregar filtros avanzados (fecha, estado, precio)
-    - ⬜ Implementar ordenamiento personalizado
-    - ⬜ Mejorar paginación
-    - ⬜ Agregar estadísticas de compras
-  - ⬜ Optimizar integración del historial
-    - ⬜ Mejorar integración de datos ventas-compras
-    - ⬜ Agregar información más detallada
-    - ⬜ Implementar sistema de caché
-  - ⬜ Mejorar seguridad y validación
-    - ⬜ Agregar validación estricta de transiciones de estado
-    - ⬜ Mejorar control de acceso basado en roles
-    - ⬜ Implementar límites de compra según suscripción
-- ⬜ Optimización de Rendimiento
-  - ⬜ Implementar caché para endpoints de historial
-  - ⬜ Optimizar consultas a base de datos
-  - ⬜ Mejorar paginación para grandes conjuntos de datos
-  - ⬜ Agregar monitoreo de rendimiento de consultas
-- ⬜ Documentación y Testing
-  - ⬜ Actualizar documentación de API
-  - ⬜ Agregar tests de endpoints
-  - ⬜ Documentar transiciones de estado
-  - ⬜ Agregar benchmarks de rendimiento
+- ✅ Endpoint unificado de historial de ventas/compras
+  - ✅ Sistema flexible de filtrado
+  - ✅ Paginación y metadatos
+  - ✅ Filtrado por estado
+  - ✅ Optimización de queries para rendimiento
+- ✅ Endpoint de vista detallada de compras
+  - ✅ Información completa de la compra
+  - ✅ Historial de estados de la venta
+  - ✅ Comentarios relacionados
+  - ✅ Integración de notificaciones
+  - ✅ Información de envío
+- ✅ Mejorar endpoints de ventas/compras
+  - ✅ Filtros avanzados (fecha, estado, precio, categoría, idioma, tienda, etc.)
+  - ✅ Ordenamiento personalizado
+  - ✅ Mejor paginación
+  - ✅ Estadísticas de compras/ventas
+- ✅ Integración de datos ventas-compras
+  - ✅ Historial unificado
+  - ✅ Información detallada
+  - ⬜ Implementar sistema de caché (futuro)
 
-## 8. Nuevas Funcionalidades (Basadas en Pruebas Manuales)
-- ⬜ Implementar validación de transiciones de estado de ventas
-  - ⬜ Agregar validación basada en roles (vendedor/comprador)
-  - ⬜ Agregar reglas de transición de estados
-  - ⬜ Implementar middleware de validación
-- ⬜ Mejorar características del historial de ventas
-  - ⬜ Agregar filtrado por rango de fechas
-  - ⬜ Agregar filtrado por categoría/idioma
-  - ⬜ Implementar búsqueda dentro del historial
-  - ⬜ Agregar opciones de ordenamiento
-- ⬜ Implementar análisis de ventas
-  - ⬜ Agregar métricas de rendimiento de ventas
-  - ⬜ Implementar análisis de tendencias
-  - ⬜ Agregar estadísticas de actividad de usuario
-- ⬜ Agregar operaciones en lote
-  - ⬜ Actualizaciones de estado en lote
-  - ⬜ Cancelaciones en lote
-  - ⬜ Exportación en lote
+## 3. Estadísticas y Métricas de Usuario
+- ✅ Métricas básicas de ventas/compras (totales, promedios, conversión, envío)
+- ✅ Dashboards personales de usuario/tienda
+- ✅ Acceso a estadísticas según suscripción/rol
 
-## 9. Mejora en Estadísticas y Análisis
-- ⬜ Implementar Estadísticas Completas de Compras
-  - ⬜ Agregar métricas detalladas de compras
-    - ⬜ Total gastado por categoría
-    - ⬜ Tendencias de gasto mensual
-    - ⬜ Distribución de estados de compra
-    - ⬜ Valor promedio de compra
-    - ⬜ Línea de tiempo de gastos
-  - ⬜ Mejorar análisis de compras
-    - ⬜ Análisis de preferencias por categoría
-    - ⬜ Patrones de frecuencia de compra
-    - ⬜ Distribución de rangos de precio
-    - ⬜ Métricas de rendimiento del vendedor
-  - ⬜ Implementar reportes de compras
-    - ⬜ Generar reportes de compras
-    - ⬜ Exportar estadísticas de compras
-    - ⬜ Análisis de rangos de fecha personalizados
+## 4. Seguridad y Validación
+- ✅ Validación de transiciones de estado (middleware, reglas)
+- ✅ Control de acceso basado en roles
+- ⬜ Validación estricta de transiciones de estado (avanzado)
+- ⬜ Límites de compra según suscripción
 
-- ⬜ Mejorar Estadísticas de Ventas
-  - ⬜ Agregar métricas detalladas de ventas
-    - ⬜ Ventas por categoría e idioma
-    - ⬜ Tendencias de ingresos mensuales
-    - ⬜ Distribución de estados de venta
-    - ⬜ Tasas de conversión
-    - ⬜ Tiempo promedio hasta la venta
-  - ⬜ Implementar análisis de ventas
-    - ⬜ Análisis de rendimiento de productos
-    - ⬜ Patrones de comportamiento del cliente
-    - ⬜ Insights de optimización de precios
-    - ⬜ Métricas de velocidad de venta
-  - ⬜ Agregar reportes de ventas
-    - ⬜ Generar reportes de ventas
-    - ⬜ Exportar estadísticas de ventas
-    - ⬜ Análisis de períodos personalizados
+## 5. Optimización y Rendimiento
+- ✅ Optimización de queries
+- ✅ Paginación para grandes volúmenes de datos
+- ⬜ Implementar caché para endpoints de historial/estadísticas
+- ⬜ Monitoreo de rendimiento y benchmarks
 
-- ⬜ Optimizar Rendimiento de Estadísticas
-  - ⬜ Implementar sistema de caché
-    - ⬜ Cachear estadísticas frecuentemente accedidas
-    - ⬜ Implementar invalidación de caché
-    - ⬜ Agregar estrategias de pre-carga
-  - ⬜ Optimizar agregación de datos
-    - ⬜ Mejorar rendimiento de consultas
-    - ⬜ Implementar pre-agregación de datos
-    - ⬜ Agregar procesamiento por lotes para grandes conjuntos
-  - ⬜ Agregar estadísticas en tiempo real
-    - ⬜ Implementar actualizaciones WebSocket
-    - ⬜ Agregar dashboards en tiempo real
-    - ⬜ Crear endpoints de estadísticas en vivo
+## 6. Documentación y Testing
+- ✅ Documentación Swagger/OpenAPI
+- ✅ Documentar transiciones de estado
+- ⬜ Agregar tests de endpoints/unitarios/E2E
+- ⬜ Agregar guías de uso
 
-- ⬜ Integrar Estadísticas entre Módulos
-  - ⬜ Unificar endpoints de estadísticas
-    - ⬜ Crear servicio centralizado de estadísticas
-    - ⬜ Estandarizar formato de estadísticas
-    - ⬜ Implementar filtrado consistente
-  - ⬜ Agregar análisis entre módulos
-    - ⬜ Correlación compras-ventas de usuario
-    - ⬜ Métricas de rendimiento de tiendas
-    - ⬜ Análisis de rendimiento por categoría
-  - ⬜ Implementar filtrado avanzado
-    - ⬜ Agregar rangos de fecha personalizados
-    - ⬜ Implementar filtrado multi-criterio
-    - ⬜ Agregar características de comparación
+## 7. Funcionalidades Avanzadas y Futuro (Postergado)
+- Operaciones en lote (actualizaciones masivas, cancelaciones, exportación)
+- Analítica avanzada y reportes
+- Visualización de datos (gráficos, tablas resumen, exportación CSV/Excel)
+- Analítica cruzada entre módulos
+- Exportación/importación
+- Optimización avanzada de estadísticas y caché
 
-- ⬜ Documentación y Testing
-  - ⬜ Documentar endpoints de estadísticas
-  - ⬜ Agregar ejemplos de API de estadísticas
-  - ⬜ Crear guías de uso de estadísticas
-  - ⬜ Implementar tests unitarios de estadísticas
-  - ⬜ Agregar benchmarks de rendimiento 
+## 8. Sistema de Gamificación y Reconocimientos
+- ✅ Gestión de badges (crear, actualizar, listar, eliminar)
+- ✅ Asignar/remover badges a usuarios
+- ✅ Asignar/remover badges a tiendas
+- ✅ Listar badges de usuarios y tiendas
+- ✅ Soporte de metadatos en la asignación de badges
+- ✅ Documentación y validación de la API
+
+> Analítica avanzada, operaciones en lote y visualización de datos quedan postergadas para una futura fase enfocada en dashboards administrativos y business intelligence. 

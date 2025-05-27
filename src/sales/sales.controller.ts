@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch, Query, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch, Query, NotFoundException, BadRequestException, UploadedFiles } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -6,7 +6,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@ne
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 import { CommentsService } from '../comments/comments.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SalesStateService } from './services/sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
@@ -80,69 +80,6 @@ export class SalesController {
   @ApiResponse({ status: 200, description: 'Sale deleted successfully.' })
   remove(@Param('id') id: string) {
     return this.salesService.remove(id);
-  }
-
-  @Post(':id/reserve')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Reserve a sale' })
-  @ApiResponse({ status: 200, description: 'Sale reserved successfully', type: Sale })
-  async reserveSale(
-    @Param('id') id: string,
-    @Body() dto: ReserveSaleDto,
-    @Request() req,
-  ): Promise<Sale> {
-    dto.saleId = id;
-    return this.salesStateService.reserveSale(dto, req.user.id);
-  }
-
-  @Post(':id/ship')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Mark sale as shipped' })
-  @ApiResponse({ status: 200, description: 'Sale marked as shipped successfully', type: Sale })
-  async shipSale(
-    @Param('id') id: string,
-    @Body() dto: ShipSaleDto,
-    @Request() req,
-  ): Promise<Sale> {
-    dto.saleId = id;
-    return this.salesStateService.shipSale(dto, req.user.id);
-  }
-
-  @Post(':id/confirm-delivery')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Confirm sale delivery' })
-  @ApiResponse({ status: 200, description: 'Delivery confirmed successfully', type: Sale })
-  async confirmDelivery(
-    @Param('id') id: string,
-    @Body() dto: ConfirmDeliveryDto,
-    @Request() req,
-  ): Promise<Sale> {
-    dto.saleId = id;
-    return this.salesStateService.confirmDelivery(dto, req.user.id);
-  }
-
-  @Post(':id/complete')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Complete a sale' })
-  @ApiResponse({ status: 200, description: 'Sale completed successfully', type: Sale })
-  async completeSale(
-    @Param('id') id: string,
-    @Request() req,
-  ): Promise<Sale> {
-    return this.salesStateService.completeSale(id, req.user.id);
-  }
-
-  @Post(':id/cancel')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Cancel a sale' })
-  @ApiResponse({ status: 200, description: 'Sale cancelled successfully', type: Sale })
-  async cancelSale(
-    @Param('id') id: string,
-    @Body() dto: CancelSaleDto,
-    @Request() req,
-  ): Promise<Sale> {
-    dto.saleId = id;
-    return this.salesStateService.cancelSale(dto, req.user.id);
   }
 
   @Get(':id/comments')
@@ -277,40 +214,125 @@ export class SalesController {
   }
 
   @Patch(':saleId/status')
-  @ApiOperation({ summary: 'Update sale status' })
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiOperation({ 
+    summary: 'Update sale status',
+    description: 'Update the status of a sale. Supports all state transitions: reserve, ship, confirm delivery, complete, and cancel.'
+  })
   @ApiResponse({
     status: 200,
     description: 'Sale status updated successfully',
     type: Sale,
   })
-  @ApiResponse({ status: 400, description: 'Invalid state transition' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 400, description: 'Invalid state transition or missing required data' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User not authorized for this action' })
   @ApiResponse({ status: 404, description: 'Sale not found' })
   async updateSaleStatus(
     @Param('saleId') saleId: string,
     @Body('status') status: SaleStatus,
     @Body() updateData: any,
     @Request() req: AuthRequest,
+    @UploadedFiles() files?: Express.Multer.File[]
   ): Promise<Sale> {
+
     const sale = await this.salesService.findOne(saleId);
     if (!sale) {
       throw new NotFoundException('Sale not found');
     }
 
-    const userRole = sale.seller.id === req.user.id ? 'seller' : 'buyer';
+    // Determine user role securely
+    let userRole: 'seller' | 'buyer' = 'seller';
+    if (sale.seller?.id === req.user.id) {
+      userRole = 'seller';
+    } else if (sale.buyer_id === req.user.id) {
+      userRole = 'buyer';
+    } else if (sale.status === SaleStatus.AVAILABLE && sale.seller?.id !== req.user.id) {
+      // If the sale is available and the user is not the seller, they are a potential buyer
+      userRole = 'buyer';
+    }
+
     const validTransitions = this.salesTransitionRulesService.getValidTransitions(
       sale.status,
       userRole,
     );
 
     if (!validTransitions.includes(status)) {
+      const rule = this.salesTransitionRulesService.getTransitionRule(sale.status, status);
+      const errorMessage = rule 
+        ? `User with role ${userRole} is not allowed to perform this transition. Only ${rule.allowedRoles.join(' or ')} can transition from ${sale.status} to ${status}`
+        : `Cannot transition from ${sale.status} to ${status}`;
+
       throw new BadRequestException({
         message: 'Invalid state transition',
-        errors: [`Cannot transition from ${sale.status} to ${status}`],
+        errors: [errorMessage],
         validTransitions,
+        currentRole: userRole,
+        requiredRoles: rule?.allowedRoles || []
       });
     }
 
+    // Validate that the sale has a buyer for certain states
+    if ([SaleStatus.SHIPPED, SaleStatus.DELIVERED, SaleStatus.COMPLETED, SaleStatus.CANCELLED].includes(status)) {
+      if (!sale.buyer_id) {
+        throw new BadRequestException('Sale has no buyer assigned');
+      }
+    }
+
+    // Find files by field
+    const shippingProof = files?.find(f => f.fieldname === 'shippingProof');
+    const deliveryProof = files?.find(f => f.fieldname === 'deliveryProof');
+
+    // State-specific validations
+    switch (status) {
+      case SaleStatus.RESERVED:
+        
+        // Validate quantity if provided
+        if (updateData.quantity) {
+          if (updateData.quantity <= 0) {
+            throw new BadRequestException('Quantity must be greater than 0');
+          }
+          if (updateData.quantity > sale.quantity) {
+            throw new BadRequestException('Requested quantity exceeds available stock');
+          }
+        }
+        
+        // Assign buyerId from token if not provided
+        if (!updateData.buyerId && req.user?.id) {
+          updateData.buyerId = req.user.id;
+        }
+        
+        if (!updateData.buyerId) {
+          throw new BadRequestException('Buyer ID is required for reservation');
+        }
+        break;
+
+      case SaleStatus.SHIPPED:
+        if (shippingProof) {
+          updateData.shippingProofUrl = await this.salesService.uploadShippingProof(shippingProof);
+        }
+        if (!updateData.shippingProofUrl) {
+          throw new BadRequestException('Shipping proof URL or file is required');
+        }
+        break;
+
+      case SaleStatus.DELIVERED:
+        if (deliveryProof) {
+          updateData.deliveryProofUrl = await this.salesService.uploadDeliveryProof(deliveryProof);
+        }
+        if (!updateData.deliveryProofUrl) {
+          throw new BadRequestException('Delivery proof URL or file is required');
+        }
+        break;
+
+      case SaleStatus.CANCELLED:
+        if (!updateData.reason) {
+          throw new BadRequestException('Cancellation reason is required');
+        }
+        break;
+    }
+
+    // Procesar la actualización según el estado
     switch (status) {
       case SaleStatus.RESERVED:
         return this.salesStateService.reserveSale(

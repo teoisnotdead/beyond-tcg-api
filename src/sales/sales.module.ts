@@ -27,6 +27,7 @@ import { SalesStatisticsService } from './services/sales-statistics.service';
 import { SalesStatisticsController } from './controllers/sales-statistics.controller';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.en
     CloudinaryModule,
     CategoriesModule,
     LanguagesModule,
+    NotificationsModule,
   ],
   providers: [
     SalesService,

@@ -13,7 +13,8 @@ export class SalesTransitionMiddleware implements NestMiddleware {
 
   async use(req: Request, res: Response, next: NextFunction) {
     const { saleId } = req.params;
-    const { status } = req.body;
+    const body = req.body || {};
+    const status = body.status;
     const userId = (req as any).user?.id;
 
     if (!saleId || !status || !userId) {
@@ -27,7 +28,12 @@ export class SalesTransitionMiddleware implements NestMiddleware {
       }
 
       // Determinar el rol del usuario
-      const userRole = sale.seller.id === userId ? 'seller' : 'buyer';
+      let userRole: 'seller' | 'buyer' = 'seller';
+      if (sale.seller?.id === userId) {
+        userRole = 'seller';
+      } else if (sale.buyer?.id === userId) {
+        userRole = 'buyer';
+      }
 
       // Validar la transición
       const validation = this.salesTransitionRulesService.validateTransition(
@@ -35,7 +41,7 @@ export class SalesTransitionMiddleware implements NestMiddleware {
         status as SaleStatus,
         userRole,
         sale,
-        req.body,
+        body,
       );
 
       if (!validation.isValid) {

@@ -157,14 +157,13 @@ export class SalesService {
   async reserveSale(saleId: string, buyerId: string) {
     const sale = await this.salesRepository.findOne({ 
       where: { id: saleId },
-      relations: ['seller', 'buyer'] 
+      relations: ['seller', 'buyer']
     });
-    
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.status !== SaleStatus.AVAILABLE) throw new BadRequestException('Sale is not available');
+    if (!sale.seller) throw new BadRequestException('Sale has no seller assigned');
     if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot reserve your own sale');
     if (sale.buyer_id) throw new BadRequestException('Sale is already reserved by another user');
-    
     sale.status = SaleStatus.RESERVED;
     sale.buyer_id = buyerId;
     sale.reserved_at = new Date();
@@ -223,19 +222,19 @@ export class SalesService {
     
     if (!sale) throw new NotFoundException('Sale not found');
     
-    // Solo permitir cancelar si está reservada
+    // Only allow cancellation if reserved
     if (sale.status !== SaleStatus.RESERVED) {
       throw new BadRequestException('Only reserved sales can be cancelled');
     }
     
-    // Solo el vendedor o el comprador pueden cancelar
+    // Only seller or buyer can cancel
     if (sale.seller.id !== userId && sale.buyer_id !== userId) {
       throw new ForbiddenException('Only the seller or buyer can cancel this sale');
     }
     
     sale.status = SaleStatus.CANCELLED;
     sale.cancelled_at = new Date();
-    // No limpiamos el buyer_id para mantener el historial
+    // Don't clear buyer_id to maintain history
     await this.salesRepository.save(sale);
     return { message: 'Sale cancelled successfully' };
   }
@@ -356,5 +355,15 @@ export class SalesService {
     }
 
     return reloadedSale;
+  }
+
+  async uploadShippingProof(file: Express.Multer.File): Promise<string> {
+    const uploaded: any = await this.cloudinaryService.uploadImage(file, 'Beyond TCG/shippingProofs');
+    return uploaded.secure_url;
+  }
+
+  async uploadDeliveryProof(file: Express.Multer.File): Promise<string> {
+    const uploaded: any = await this.cloudinaryService.uploadImage(file, 'Beyond TCG/deliveryProofs');
+    return uploaded.secure_url;
   }
 }

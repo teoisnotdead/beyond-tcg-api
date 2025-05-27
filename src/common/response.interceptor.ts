@@ -19,17 +19,23 @@ export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       map((data) => {
-        // If the controller returns an object with message/data, use it. Otherwise, wrap it.
-        if (data && typeof data === 'object' && ('message' in data || 'data' in data)) {
-          return {
+        try {
+          // If the controller returns an object with message/data, use it. Otherwise, wrap it.
+          if (data && typeof data === 'object' && ('message' in data || 'data' in data)) {
+            const response = {
+              success: true,
+              ...data,
+            };
+            return response;
+          }
+          const response = {
             success: true,
-            ...data,
+            data,
           };
+          return response;
+        } catch (error) {
+          throw error;
         }
-        return {
-          success: true,
-          data,
-        };
       }),
       catchError((err) => {
         if (err instanceof HttpException) {

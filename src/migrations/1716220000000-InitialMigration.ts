@@ -231,6 +231,9 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         is_read BOOLEAN DEFAULT false,
         related_entity_id UUID,
         related_entity_type VARCHAR(50),
+        title VARCHAR(255),
+        message TEXT,
+        metadata JSONB,
         created_at TIMESTAMP DEFAULT now(),
         updated_at TIMESTAMP DEFAULT now()
       );

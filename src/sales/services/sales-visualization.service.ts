@@ -57,31 +57,31 @@ export class SalesVisualizationService {
 
     return {
       type: 'line',
-      title: 'Tendencia de Ventas',
+      title: 'Sales Trend',
       labels: results.map(r => this.formatDate(r.period, period)),
       datasets: [
         {
-          label: 'Ventas Totales',
+          label: 'Total Sales',
           data: results.map(r => parseInt(r.total_sales)),
           borderColor: '#4CAF50',
           fill: false
         },
         {
-          label: 'Ingresos Totales',
+          label: 'Total Revenue',
           data: results.map(r => parseFloat(r.total_revenue)),
           borderColor: '#2196F3',
           fill: false
         },
         {
-          label: 'Precio Promedio',
+          label: 'Average Price',
           data: results.map(r => parseFloat(r.average_price)),
           borderColor: '#FFC107',
           fill: false
         }
       ],
       options: {
-        xAxisLabel: 'Período',
-        yAxisLabel: 'Valor',
+        xAxisLabel: 'Period',
+        yAxisLabel: 'Value',
         showLegend: true
       }
     };
@@ -167,23 +167,23 @@ export class SalesVisualizationService {
 
     return {
       type: 'bar',
-      title: 'Rendimiento por Categoría',
+      title: 'Category Performance',
       labels: results.map(r => r.category_name),
       datasets: [
         {
-          label: 'Tasa de Conversión (%)',
+          label: 'Conversion Rate (%)',
           data: results.map(r => parseFloat(r.conversion_rate)),
           backgroundColor: '#4CAF50'
         },
         {
-          label: 'Tiempo Promedio de Venta (horas)',
+          label: 'Average Time to Sell (hours)',
           data: results.map(r => parseFloat(r.average_time_to_sell)),
           backgroundColor: '#2196F3'
         }
       ],
       options: {
-        xAxisLabel: 'Categoría',
-        yAxisLabel: 'Valor',
+        xAxisLabel: 'Category',
+        yAxisLabel: 'Value',
         showLegend: true,
         stacked: false
       }
@@ -279,28 +279,28 @@ export class SalesVisualizationService {
 
     return {
       type: 'bar',
-      title: 'Comportamiento de Compradores',
+      title: 'Buyer Behavior',
       labels: results.map(r => r.purchase_frequency),
       datasets: [
         {
-          label: 'Cantidad de Usuarios',
+          label: 'Number of Users',
           data: results.map(r => parseInt(r.user_count)),
           backgroundColor: '#4CAF50'
         },
         {
-          label: 'Valor Promedio de Compra',
+          label: 'Average Purchase Value',
           data: results.map(r => parseFloat(r.avg_value)),
           backgroundColor: '#2196F3'
         },
         {
-          label: 'Categorías Únicas Promedio',
+          label: 'Average Unique Categories',
           data: results.map(r => parseFloat(r.avg_categories)),
           backgroundColor: '#FFC107'
         }
       ],
       options: {
-        xAxisLabel: 'Frecuencia de Compra',
-        yAxisLabel: 'Valor',
+        xAxisLabel: 'Purchase Frequency',
+        yAxisLabel: 'Value',
         showLegend: true,
         stacked: false
       }
@@ -311,14 +311,14 @@ export class SalesVisualizationService {
     const d = new Date(date);
     switch (period) {
       case 'days':
-        return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        return d.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' });
       case 'weeks':
         const weekNumber = this.getWeekNumber(d);
-        return `Semana ${weekNumber}`;
+        return `Week ${weekNumber}`;
       case 'months':
-        return d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+        return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       default:
-        return d.toLocaleDateString('es-ES');
+        return d.toLocaleDateString('en-US');
     }
   }
 

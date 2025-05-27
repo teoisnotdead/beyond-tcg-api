@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '../entities/sale.entity';
 
+export type UserRole = 'seller' | 'buyer' | 'system';
+
 export type TransitionRule = {
   from: SaleStatus;
   to: SaleStatus;
-  allowedRoles: ('seller' | 'buyer')[];
+  allowedRoles: UserRole[];
   requiredFields?: string[];
   validationFn?: (sale: any) => boolean;
 };
@@ -15,26 +17,26 @@ export class SalesTransitionRulesService {
     {
       from: SaleStatus.AVAILABLE,
       to: SaleStatus.RESERVED,
-      allowedRoles: ['seller'],
-      requiredFields: ['buyerId', 'quantity'],
+      allowedRoles: ['buyer'],
+      requiredFields: ['quantity'],
       validationFn: (sale) => sale.quantity > 0,
     },
     {
       from: SaleStatus.RESERVED,
       to: SaleStatus.SHIPPED,
       allowedRoles: ['seller'],
-      requiredFields: ['shippingProofUrl'],
+      requiredFields: ['shippingProof'],
     },
     {
       from: SaleStatus.SHIPPED,
       to: SaleStatus.DELIVERED,
       allowedRoles: ['buyer'],
-      requiredFields: ['deliveryProofUrl'],
+      requiredFields: ['deliveryProof'],
     },
     {
       from: SaleStatus.DELIVERED,
       to: SaleStatus.COMPLETED,
-      allowedRoles: ['seller'],
+      allowedRoles: ['system'],
     },
     {
       from: SaleStatus.AVAILABLE,

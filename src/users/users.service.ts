@@ -183,7 +183,6 @@ export class UsersService {
       };
       return result;
     } catch (error) {
-      console.error('[USERS SERVICE] Error en searchUsers:', error);
       throw error;
     }
   }

@@ -17,25 +17,31 @@
 - ✅ Get user profile metadata (GET `/api/users/profile/metadata`)
 
 ## 2. Sales (PRIORIDAD: volver a probar)
-- ⬜ Create sale (POST `/api/sales`)
-- ⬜ List active sales (GET `/api/sales`)
-- ⬜ Search sales with filters and pagination (GET `/api/sales?search=...&page=...`)
-- ⬜ Get sale details (GET `/api/sales/:id`)
-- ⬜ Reserve sale (POST `/api/sales/:id/reserve`)
-- ⬜ Mark sale as shipped (POST `/api/sales/:id/ship`)
-- ⬜ Confirm sale delivery (POST `/api/sales/:id/confirm-delivery`)
-- ⬜ Cancel sale (POST `/api/sales/:id/cancel`)
-- ⬜ Delete sale (DELETE `/api/sales/:id`)
-- ⬜ Update sale (PATCH `/api/sales/:id`)
+- ✅ Create sale (POST `/api/sales`)
+- ✅ List active sales (GET `/api/sales`)
+- ✅ Search sales with filters and pagination (GET `/api/sales?search=...&page=...`)
+- ✅ Get sale details (GET `/api/sales/:id`)
+- ✅ Update sale status (PATCH `/api/sales/:saleId/status`)
+  - ✅ Test all state transitions:
+    - ✅ AVAILABLE -> RESERVED (buyer)
+    - ✅ RESERVED -> SHIPPED (seller)
+    - ✅ SHIPPED -> DELIVERED (buyer)
+    - ✅ DELIVERED -> COMPLETED (automatic)
+    - ⬜ RESERVED -> CANCELLED (seller/buyer)
+  - ✅ Test file uploads for proofs
+  - ✅ Test validation rules
+  - ✅ Test role-based access
+- ✅ Delete sale (DELETE `/api/sales/:id`)
+- ✅ Update sale (PATCH `/api/sales/:id`)
 - ⬜ Get sales history (GET `/api/sales/history`)
   - ⬜ Test all filters (type, status, search, category, language, store, price, quantity, proofs, date range)
   - ⬜ Test pagination and sorting
   - ⬜ Verify related data (category, language, seller, buyer, store)
 - ⬜ Test sales state transitions
-  - ⬜ Verify role-based access (seller/buyer)
-  - ⬜ Verify state transition rules
+  - ✅ Verify role-based access (seller/buyer)
+  - ✅ Verify state transition rules
   - ⬜ Test cancellation with reason
-  - ⬜ Verify notifications for state changes
+  - ✅ Verify notifications for state changes
 
 ## 3. Statistics & Dashboards (PRIORIDAD: volver a probar)
 - ⬜ Get user statistics (GET `/api/sales/statistics/user`)
@@ -89,12 +95,12 @@
 - ⬜ Verify subscription expiration handling
 
 ## 10. Notifications
-- ⬜ Receive notifications via WebSocket (check in frontend or with WS client)
-- ⬜ Mark notification as read (POST `/api/notifications/:id/read`)
-- ⬜ List user notifications (GET `/api/notifications/user`)
-- ⬜ Verify notification metadata is correct
-- ⬜ Test notifications for sales state changes
-- ⬜ Verify i18n in notifications
+- ✅ Receive notifications via WebSocket (check in frontend or with WS client)
+- ✅ Mark notification as read (POST `/api/notifications/:id/read`)
+- ✅ List user notifications (GET `/api/notifications/user`)
+- ✅ Verify notification metadata is correct
+- ✅ Test notifications for sales state changes
+- ✅ Verify i18n in notifications
 
 ## 11. Categories & Languages
 - ⬜ List categories (GET `/api/categories`)
@@ -148,16 +154,23 @@
   - ⬜ Test combined sorting with filters
 
 ## 16. Nuevos Casos de Prueba (Validación de Estados)
-- ⬜ Test role-based state transitions
-  - ⬜ Verify seller-only transitions
-  - ⬜ Verify buyer-only transitions
-  - ⬜ Test unauthorized transitions
-  - ⬜ Test with different user roles
-- ⬜ Test state transition rules
-  - ⬜ Verify valid state sequences
-  - ⬜ Test invalid state transitions
-  - ⬜ Test edge cases (e.g., cancelled to shipped)
-  - ⬜ Test state transitions with quantity changes
+- ✅ Test unified status endpoint
+  - ✅ Verify all state transitions in single endpoint
+  - ✅ Test file uploads for shipping/delivery proofs
+  - ✅ Test validation of required fields per state
+  - ✅ Test error handling for invalid transitions
+  - ✅ Test concurrent status updates
+  - ✅ Verify automatic transitions (DELIVERED -> COMPLETED)
+- ✅ Test role-based state transitions
+  - ✅ Verify seller-only transitions (SHIPPED)
+  - ✅ Verify buyer-only transitions (RESERVED, DELIVERED)
+  - ✅ Test unauthorized transitions
+  - ✅ Test with different user roles
+- ✅ Test state transition rules
+  - ✅ Verify valid state sequences
+  - ✅ Test invalid state transitions
+  - ✅ Test edge cases (e.g., cancelled to shipped)
+  - ✅ Test state transitions with quantity changes
 - ⬜ Test cancellation scenarios
   - ⬜ Cancel with valid reason
   - ⬜ Cancel with invalid reason

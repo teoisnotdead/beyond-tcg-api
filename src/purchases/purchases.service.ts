@@ -23,10 +23,13 @@ export class PurchasesService {
       relations: ['seller', 'category', 'language'],
     });
     if (!sale) throw new NotFoundException('Sale not found');
-    if (sale.status !== SaleStatus.AVAILABLE && 
-        sale.status !== SaleStatus.RESERVED && 
+    if (sale.status !== SaleStatus.AVAILABLE &&
+        sale.status !== SaleStatus.RESERVED &&
         sale.status !== SaleStatus.SHIPPED) {
       throw new BadRequestException('Sale is not available for purchase');
+    }
+    if ([SaleStatus.RESERVED, SaleStatus.SHIPPED].includes(sale.status) && sale.buyer_id !== userId) {
+      throw new ForbiddenException('You do not have permission to purchase this sale');
     }
     if (sale.quantity < createPurchaseDto.quantity) {
       throw new BadRequestException('Not enough stock');

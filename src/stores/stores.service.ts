@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { StoreSocialLink } from './entities/store-social-link.entity';
-import { Sale } from '../sales/entities/sale.entity';
+import { Sale, SaleStatus } from '../sales/entities/sale.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Inject } from '@nestjs/common';
@@ -22,7 +22,7 @@ export class StoresService {
     private favoriteRepository: Repository<Favorite>,
     @Inject(CloudinaryService)
     private cloudinaryService: CloudinaryService,
-  ) {}
+  ) { }
 
   async create(userId: string, createStoreDto: CreateStoreDto): Promise<Store> {
     // Check if the user already has a store
@@ -74,70 +74,84 @@ export class StoresService {
   }
 
   async getStatistics(storeId: string) {
-    // Get all sales of the store
-    const sales = await this.salesRepository.find({ where: { store_id: storeId } });
-    const saleIds = sales.map(s => s.id);
+    // 1. Total Sales & Revenue (Completed sales)
+    const { totalSales, totalRevenue } = await this.salesRepository
+      .createQueryBuilder('sale')
+      .select('COUNT(sale.id)', 'totalSales')
+      .addSelect('SUM(sale.price * sale.quantity)', 'totalRevenue')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.status = :status', { status: SaleStatus.COMPLETED })
+      .getRawOne();
 
-    // Total sales (completed)
-    const totalSales = sales.filter(s => s.status === 'completed').length;
-    // Revenue
-    const totalRevenue = sales.filter(s => s.status === 'completed').reduce((acc, s) => acc + Number(s.price) * s.quantity, 0);
-    // Total views
-    const totalViews = sales.reduce((acc, s) => acc + (s.views || 0), 0);
-    // Favorites received (using queryBuilder for multiple sales)
-    let totalFavorites = 0;
-    if (saleIds.length > 0) {
-      const result = await this.favoriteRepository.createQueryBuilder('favorite')
-        .where('favorite.saleId IN (:...saleIds)', { saleIds })
-        .getCount();
-      totalFavorites = result;
-    }
-    // Top products
-    const productStats: Record<string, { sales: number; revenue: number; favorites: number }> = {};
-    for (const s of sales) {
-      if (!productStats[s.name]) productStats[s.name] = { sales: 0, revenue: 0, favorites: 0 };
-      if (s.status === 'completed') productStats[s.name].sales += 1;
-      if (s.status === 'completed') productStats[s.name].revenue += Number(s.price) * s.quantity;
-    }
-    // Favorites per product
-    if (saleIds.length > 0) {
-      const favoritesBySale = await this.favoriteRepository.createQueryBuilder('favorite')
-        .select('favorite.saleId', 'saleId')
-        .addSelect('COUNT(*)', 'count')
-        .where('favorite.saleId IN (:...saleIds)', { saleIds })
-        .groupBy('favorite.saleId')
-        .getRawMany();
-      for (const fav of favoritesBySale) {
-        const sale = sales.find(s => s.id === fav.saleId);
-        if (sale && productStats[sale.name]) {
-          productStats[sale.name].favorites = Number(fav.count);
-        }
-      }
-    }
-    const topProducts = Object.entries(productStats)
-      .map(([name, stats]) => ({ name, sales: stats.sales, revenue: stats.revenue, favorites: stats.favorites }))
-      .sort((a, b) => b.sales - a.sales)
-      .slice(0, 5);
-    // Sales by month (last 6 months)
-    const now = new Date();
-    const salesByMonth: { month: string; sales: number; revenue: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthStr = month.toISOString().slice(0, 7);
-      const salesInMonth = sales.filter(s => s.status === 'completed' && s.completed_at && s.completed_at.toISOString().slice(0, 7) === monthStr);
-      salesByMonth.push({
-        month: monthStr,
-        sales: salesInMonth.length,
-        revenue: salesInMonth.reduce((acc, s) => acc + Number(s.price) * s.quantity, 0)
-      });
-    }
+    // 2. Total Views (All sales)
+    const { totalViews } = await this.salesRepository
+      .createQueryBuilder('sale')
+      .select('SUM(sale.views)', 'totalViews')
+      .where('sale.store_id = :storeId', { storeId })
+      .getRawOne();
+
+    // 3. Total Favorites
+    // We need to join with favorites. 
+    // Note: This counts total favorites across all sales of the store.
+    const { totalFavorites } = await this.salesRepository
+      .createQueryBuilder('sale')
+      .leftJoin(Favorite, 'favorite', 'favorite.saleId = sale.id')
+      .select('COUNT(favorite.id)', 'totalFavorites')
+      .where('sale.store_id = :storeId', { storeId })
+      .getRawOne();
+
+    // 4. Top Products (by sales count)
+    const topProducts = await this.salesRepository
+      .createQueryBuilder('sale')
+      .select('sale.name', 'name')
+      .addSelect('COUNT(sale.id)', 'sales')
+      .addSelect('SUM(sale.price * sale.quantity)', 'revenue')
+      // We can't easily get favorites count per product in the same query without subquery or complex group by
+      // So we'll just get sales and revenue for now, or do a separate query/join.
+      // Let's try to join favorites to get count per product.
+      .leftJoin(Favorite, 'favorite', 'favorite.saleId = sale.id')
+      .addSelect('COUNT(favorite.id)', 'favorites')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.status = :status', { status: SaleStatus.COMPLETED })
+      .groupBy('sale.name')
+      .orderBy('sales', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    // 5. Sales by Month (Last 6 months)
+    // This is database specific (PostgreSQL).
+    const salesByMonth = await this.salesRepository.query(`
+      SELECT 
+        TO_CHAR(completed_at, 'YYYY-MM') as month,
+        COUNT(id) as sales,
+        SUM(price * quantity) as revenue
+      FROM sales
+      WHERE store_id = $1 
+        AND status = $2
+        AND completed_at >= NOW() - INTERVAL '6 months'
+      GROUP BY month
+      ORDER BY month DESC
+    `, [storeId, SaleStatus.COMPLETED]);
+
+    // Fill in missing months if needed (optional, but good for charts)
+    // For now, we return what the DB gives.
+
     return {
-      totalSales,
-      totalRevenue,
-      totalViews,
-      totalFavorites,
-      topProducts,
-      salesByMonth
+      totalSales: Number(totalSales || 0),
+      totalRevenue: Number(totalRevenue || 0),
+      totalViews: Number(totalViews || 0),
+      totalFavorites: Number(totalFavorites || 0),
+      topProducts: topProducts.map(p => ({
+        name: p.name,
+        sales: Number(p.sales),
+        revenue: Number(p.revenue),
+        favorites: Number(p.favorites)
+      })),
+      salesByMonth: salesByMonth.map((s: any) => ({
+        month: s.month,
+        sales: Number(s.sales),
+        revenue: Number(s.revenue)
+      }))
     };
   }
 

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -32,49 +32,64 @@ export class UsersService {
     private favoriteRepository: Repository<Favorite>,
     private eventEmitter: EventEmitter2,
     private cloudinaryService: CloudinaryService,
-  ) {}
+    private dataSource: DataSource,
+  ) { }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.usersRepository.findOne({ where: { email: createUserDto.email } });
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
-    const user = this.usersRepository.create(createUserDto);
 
-    // Assign default avatar if not provided (for email/password registration)
-    if (!user.avatar_url) {
-      user.avatar_url = EnvConfig().cloudinary.defaultAvatarUrl;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = this.usersRepository.create(createUserDto);
+
+      // Assign default avatar if not provided (for email/password registration)
+      if (!user.avatar_url) {
+        user.avatar_url = EnvConfig().cloudinary.defaultAvatarUrl;
+      }
+
+      if (createUserDto.password) {
+        const salt = await bcrypt.genSalt();
+        user.password = await bcrypt.hash(createUserDto.password, salt);
+      }
+      const savedUser = await queryRunner.manager.save(user);
+
+      // Logic for "Free" subscription
+      const freePlan = await this.subscriptionPlansRepository.findOne({ where: { name: 'Free' } });
+      if (freePlan) {
+        const now = new Date();
+        const endDate = new Date(now);
+        endDate.setDate(now.getDate() + freePlan.duration_days);
+
+        const userSubscription = await queryRunner.manager.save(UserSubscription, {
+          user_id: savedUser.id,
+          plan_id: freePlan.id,
+          start_date: now,
+          end_date: endDate,
+          is_active: true,
+        });
+
+        savedUser.current_subscription_id = userSubscription.id;
+        await queryRunner.manager.save(savedUser);
+      }
+
+      await queryRunner.commitTransaction();
+
+      // Emit event for badge assignment
+      this.eventEmitter.emit('user.registered', new UserRegisteredEvent(savedUser.id));
+
+      return savedUser;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    if (createUserDto.password) {
-      const salt = await bcrypt.genSalt();
-      user.password = await bcrypt.hash(createUserDto.password, salt);
-    }
-    const savedUser = await this.usersRepository.save(user);
-
-    // Logic for "Free" subscription
-    const freePlan = await this.subscriptionPlansRepository.findOne({ where: { name: 'Free' } });
-    if (freePlan) {
-      const now = new Date();
-      const endDate = new Date(now);
-      endDate.setDate(now.getDate() + freePlan.duration_days);
-
-      const userSubscription = await this.userSubscriptionsRepository.save({
-        user_id: savedUser.id,
-        plan_id: freePlan.id,
-        start_date: now,
-        end_date: endDate,
-        is_active: true,
-      });
-
-      savedUser.current_subscription_id = userSubscription.id;
-      await this.usersRepository.save(savedUser);
-    }
-
-    // Emit event for badge assignment
-    this.eventEmitter.emit('user.registered', new UserRegisteredEvent(savedUser.id));
-
-    return savedUser;
   }
 
   async findAll(page: number = 1, limit: number = 20, filters: Partial<User> = {}): Promise<{ data: User[]; total: number; page: number; totalPages: number }> {

@@ -92,7 +92,8 @@
     "rootDir": "src",
     "moduleNameMapper": {
       "^src/(.*)$": "<rootDir>/$1",
-      "^@nestjs/passport$": "<rootDir>/../test/mocks/nestjs-passport.ts"
+      "^@nestjs/passport$": "<rootDir>/../test/mocks/nestjs-passport.ts",
+      "^bcrypt$": "<rootDir>/../test/mocks/bcrypt.ts"
     },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {

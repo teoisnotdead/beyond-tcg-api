@@ -38,7 +38,7 @@ export class SalesService {
     private readonly purchasesService: PurchasesService,
     @Inject(CloudinaryService)
     private cloudinaryService: CloudinaryService,
-  ) {}
+  ) { }
 
   async countActiveSalesByUser(userId: string): Promise<number> {
     return this.salesRepository.count({
@@ -147,10 +147,23 @@ export class SalesService {
   }
 
   async remove(id: string): Promise<{ message: string }> {
-    const result = await this.salesRepository.delete(id);
-    if (result.affected === 0) {
+    const sale = await this.salesRepository.findOne({ where: { id } });
+    if (!sale) {
       throw new NotFoundException('Sale not found');
     }
+
+    if (sale.image_url) {
+      const publicId = this.cloudinaryService.extractPublicId(sale.image_url);
+      if (publicId) {
+        try {
+          await this.cloudinaryService.deleteImage(publicId);
+        } catch (error) {
+          console.error(`Failed to delete image for sale ${id}:`, error);
+        }
+      }
+    }
+
+    await this.salesRepository.delete(id);
     return { message: 'Sale deleted successfully' };
   }
 
@@ -177,11 +190,11 @@ export class SalesService {
   }
 
   async shipSale(saleId: string, sellerId: string, shippingProofUrl: string) {
-    const sale = await this.salesRepository.findOne({ 
+    const sale = await this.salesRepository.findOne({
       where: { id: saleId },
-      relations: ['seller', 'buyer'] 
+      relations: ['seller', 'buyer']
     });
-    
+
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id !== sellerId) throw new ForbiddenException('Only the seller can mark the sale as shipped');
     if (sale.status !== SaleStatus.RESERVED) throw new BadRequestException('Sale must be reserved before shipping');
@@ -205,7 +218,7 @@ export class SalesService {
       where: { id: saleId },
       relations: ['seller', 'buyer']
     });
-    
+
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot confirm delivery of your own sale');
     if (sale.status !== SaleStatus.SHIPPED) throw new BadRequestException('Sale must be shipped before confirming delivery');
@@ -257,23 +270,23 @@ export class SalesService {
   }
 
   async cancelSale(saleId: string, userId: string) {
-    const sale = await this.salesRepository.findOne({ 
+    const sale = await this.salesRepository.findOne({
       where: { id: saleId },
-      relations: ['seller', 'buyer'] 
+      relations: ['seller', 'buyer']
     });
-    
+
     if (!sale) throw new NotFoundException('Sale not found');
-    
+
     // Only allow cancellation if reserved
     if (sale.status !== SaleStatus.RESERVED) {
       throw new BadRequestException('Only reserved sales can be cancelled');
     }
-    
+
     // Only seller or buyer can cancel
     if (sale.seller.id !== userId && sale.buyer_id !== userId) {
       throw new ForbiddenException('Only the seller or buyer can cancel this sale');
     }
-    
+
     sale.status = SaleStatus.CANCELLED;
     sale.cancelled_at = new Date();
     // Don't clear buyer_id to maintain history
@@ -360,15 +373,15 @@ export class SalesService {
   }
 
   async relistSale(saleId: string, userId: string, updateData?: Partial<CreateSaleDto>): Promise<Sale> {
-    const sale = await this.salesRepository.findOne({ 
+    const sale = await this.salesRepository.findOne({
       where: { id: saleId },
-      relations: ['seller', 'buyer', 'category', 'language'] 
+      relations: ['seller', 'buyer', 'category', 'language']
     });
-    
+
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id !== userId) throw new ForbiddenException('Only the seller can relist the sale');
     if (sale.status !== SaleStatus.CANCELLED) throw new BadRequestException('Only cancelled sales can be relisted');
-    
+
     const newSaleData: DeepPartial<Sale> = {
       seller: { id: sale.seller.id },
       store_id: sale.store_id,
@@ -386,7 +399,7 @@ export class SalesService {
 
     const newSale = this.salesRepository.create(newSaleData);
     const savedSale = await this.salesRepository.save(newSale);
-    
+
     const reloadedSale = await this.salesRepository.findOne({
       where: { id: savedSale.id },
       relations: ['seller', 'category', 'language']

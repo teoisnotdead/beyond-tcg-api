@@ -14,7 +14,7 @@ export class SalesStateService {
     private salesRepository: Repository<Sale>,
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   private async validateSaleExists(saleId: string): Promise<Sale> {
     const sale = await this.salesRepository.findOne({
@@ -51,27 +51,10 @@ export class SalesStateService {
   }
 
   async reserveSale(dto: ReserveSaleDto, userId: string): Promise<Sale> {
-    const sale = await this.validateSaleExists(dto.saleId);
-
-    if (sale.status !== SaleStatus.AVAILABLE) {
+    // Initial check (optional, but good for fast fail)
+    const saleCheck = await this.validateSaleExists(dto.saleId);
+    if (saleCheck.status !== SaleStatus.AVAILABLE) {
       throw new BadRequestException('Sale must be available to be reserved');
-    }
-
-    if (sale.seller?.id === userId) {
-      throw new BadRequestException('Seller cannot reserve their own sale');
-    }
-
-    if (sale.buyer_id) {
-      throw new BadRequestException('Sale is already reserved');
-    }
-
-    // Validar cantidad si se proporciona
-    const quantity = dto.quantity || sale.quantity;
-    if (quantity <= 0) {
-      throw new BadRequestException('Quantity must be greater than 0');
-    }
-    if (quantity > sale.quantity) {
-      throw new BadRequestException('Requested quantity exceeds available stock');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -79,12 +62,43 @@ export class SalesStateService {
     await queryRunner.startTransaction();
 
     try {
-      // Si la cantidad solicitada es menor que la disponible, creamos una nueva venta
+      // Lock the sale row for update
+      const sale = await queryRunner.manager.findOne(Sale, {
+        where: { id: dto.saleId },
+        relations: ['seller', 'buyer', 'store', 'category', 'language'],
+        lock: { mode: 'pessimistic_write' }
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Sale not found');
+      }
+
+      if (sale.status !== SaleStatus.AVAILABLE) {
+        throw new BadRequestException('Sale must be available to be reserved');
+      }
+
+      if (sale.seller?.id === userId) {
+        throw new BadRequestException('Seller cannot reserve their own sale');
+      }
+
+      if (sale.buyer_id) {
+        throw new BadRequestException('Sale is already reserved');
+      }
+
+      // Validate quantity
+      const quantity = dto.quantity || sale.quantity;
+      if (quantity <= 0) {
+        throw new BadRequestException('Quantity must be greater than 0');
+      }
+      if (quantity > sale.quantity) {
+        throw new BadRequestException('Requested quantity exceeds available stock');
+      }
+
+      // If requested quantity is less than available, create a new sale for the remaining
       if (quantity < sale.quantity) {
-        // Create a new sale for the remaining quantity
         const remainingSale = this.salesRepository.create({
           ...sale,
-          id: undefined, // Will be automatically generated
+          id: undefined,
           parent_sale_id: sale.id,
           quantity: sale.quantity - quantity,
           original_quantity: sale.quantity - quantity,
@@ -101,30 +115,8 @@ export class SalesStateService {
       sale.quantity = quantity;
       sale.reserved_quantity = quantity;
       await queryRunner.manager.save(sale);
+
       await queryRunner.commitTransaction();
-
-      // Then reload the sale with all necessary relations
-      const finalSale = await this.salesRepository
-        .createQueryBuilder('sale')
-        .leftJoinAndSelect('sale.seller', 'seller')
-        .leftJoinAndSelect('sale.buyer', 'buyer')
-        .leftJoinAndSelect('sale.store', 'store')
-        .leftJoinAndSelect('sale.category', 'category')
-        .leftJoinAndSelect('sale.language', 'language')
-        .where('sale.id = :id', { id: sale.id })
-        .getOne();
-
-      if (!finalSale) {
-        throw new NotFoundException('Sale not found after update');
-      }
-
-      // Ensure the buyer object is present
-      if (!finalSale.buyer && finalSale.buyer_id) {
-        const buyer = await queryRunner.manager.findOne(User, { where: { id: finalSale.buyer_id } });
-        if (buyer) {
-          finalSale.buyer = buyer;
-        }
-      }
 
       // Notify the seller
       await this.notificationsService.create({
@@ -133,7 +125,9 @@ export class SalesStateService {
         metadata: { saleId: sale.id, status: SaleStatus.RESERVED }
       });
 
-      return finalSale;
+      // Reload to return full object
+      return this.salesRepository.findOne({ where: { id: sale.id }, relations: ['seller', 'buyer', 'store', 'category', 'language'] }) as Promise<Sale>;
+
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -144,7 +138,7 @@ export class SalesStateService {
 
   async shipSale(dto: ShipSaleDto, userId: string): Promise<Sale> {
     const sale = await this.validateSaleExists(dto.saleId);
-    
+
     if (sale.status !== SaleStatus.RESERVED) {
       throw new BadRequestException('Sale must be reserved before shipping');
     }
@@ -157,7 +151,7 @@ export class SalesStateService {
     sale.shipped_at = new Date();
     const updatedSale = await this.salesRepository.save(sale);
 
-    // Notificar al comprador
+    // Notify buyer
     if (sale.buyer_id) {
       await this.notificationsService.create({
         user_id: sale.buyer_id,
@@ -170,61 +164,41 @@ export class SalesStateService {
   }
 
   async confirmDelivery(dto: ConfirmDeliveryDto, userId: string): Promise<Sale> {
-    const sale = await this.validateSaleExists(dto.saleId);
-    
-    if (sale.status !== SaleStatus.SHIPPED) {
-      throw new BadRequestException('Sale must be shipped before confirming delivery');
-    }
-    if (!sale.buyer || !sale.buyer?.id) {
-      throw new BadRequestException('Sale has no buyer assigned');
-    }
-    await this.validateUserCanModifySale(sale, userId, 'buyer');
-    sale.reserved_quantity = sale.reserved_quantity ?? sale.quantity;
-    sale.status = SaleStatus.DELIVERED;
-    sale.delivery_proof_url = dto.deliveryProofUrl;
-    sale.delivered_at = new Date();
-    const updatedSale = await this.salesRepository.save(sale);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // Notificar al vendedor que fue entregada
-    await this.notificationsService.create({
-      user_id: sale.seller.id,
-      type: NotificationType.SALE_DELIVERED,
-      metadata: { saleId: sale.id, status: SaleStatus.DELIVERED }
-    });
+    try {
+      const sale = await queryRunner.manager.findOne(Sale, {
+        where: { id: dto.saleId },
+        relations: ['seller', 'buyer', 'language', 'category'],
+        lock: { mode: 'pessimistic_write' }
+      });
 
-    // Schedule automatic transition to COMPLETED
-    setTimeout(async () => {
-      try {
-        await this.automaticallyCompleteSale(sale.id);
-      } catch (error) {
+      if (!sale) throw new NotFoundException('Sale not found');
+
+      if (sale.status !== SaleStatus.SHIPPED) {
+        throw new BadRequestException('Sale must be shipped before confirming delivery');
       }
-    }, 60 * 1000); // 1 minute
+      if (!sale.buyer || !sale.buyer?.id) {
+        throw new BadRequestException('Sale has no buyer assigned');
+      }
 
-    return updatedSale;
-  }
+      // Validate user (buyer)
+      if (sale.buyer.id !== userId) {
+        throw new ForbiddenException('Only the buyer can perform this action');
+      }
 
-  private async automaticallyCompleteSale(saleId: string): Promise<Sale> {
-    // Load the sale with all necessary relations
-    const sale = await this.salesRepository.findOne({
-      where: { id: saleId },
-      relations: ['seller', 'buyer', 'language', 'category'],
-    });
-    if (!sale) {
-      throw new NotFoundException('Sale not found');
-    }
-    if (sale.status !== SaleStatus.DELIVERED) {
-      return sale;
-    }
+      const reservedQuantity = sale.reserved_quantity ?? sale.quantity;
+      if (reservedQuantity <= 0) {
+        throw new BadRequestException('Reserved quantity must be greater than 0');
+      }
+      if (reservedQuantity > sale.quantity) {
+        throw new BadRequestException('Reserved quantity exceeds available stock');
+      }
 
-    const quantityToRecord = sale.reserved_quantity ?? sale.quantity;
-
-    sale.status = SaleStatus.COMPLETED;
-    sale.completed_at = new Date();
-    const updatedSale = await this.salesRepository.save(sale);
-
-    //Create the purchase record
-    if (sale.buyer && sale.buyer.id) {
-      await this.dataSource.query(`
+      // Create purchase record using raw SQL to be part of the transaction
+      await queryRunner.manager.query(`
         INSERT INTO purchases (
           id, user_id, sale_id, seller_id, name, description, 
           price, image_url, quantity, language_id, category_id, created_at
@@ -240,25 +214,51 @@ export class SalesStateService {
         sale.description,
         sale.price,
         sale.image_url,
-        quantityToRecord,
+        reservedQuantity,
         sale.language.id,
         sale.category.id
       ]);
+
+      sale.delivery_proof_url = dto.deliveryProofUrl;
+      sale.delivered_at = new Date();
+      sale.reserved_quantity = reservedQuantity;
+      sale.status = SaleStatus.COMPLETED;
+      sale.completed_at = new Date();
+
+      await queryRunner.manager.save(sale);
+      await queryRunner.commitTransaction();
+
+      // Notify seller
+      await this.notificationsService.create({
+        user_id: sale.seller.id,
+        type: NotificationType.SALE_DELIVERED,
+        metadata: { saleId: sale.id, status: SaleStatus.DELIVERED }
+      });
+
+      await this.notificationsService.create({
+        user_id: sale.seller.id,
+        type: NotificationType.SALE_COMPLETED,
+        metadata: { saleId: sale.id, status: SaleStatus.COMPLETED }
+      });
+
+      return sale;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
+  }
 
-    // Notify the seller that it was completed
-    await this.notificationsService.create({
-      user_id: sale.seller.id,
-      type: NotificationType.SALE_COMPLETED,
-      metadata: { saleId: sale.id, status: SaleStatus.COMPLETED }
-    });
-
-    return updatedSale;
+  private async automaticallyCompleteSale(saleId: string): Promise<Sale> {
+    // Deprecated but kept for compatibility if needed
+    return this.salesRepository.findOne({ where: { id: saleId } }) as Promise<Sale>;
   }
 
   async completeSale(saleId: string, userId: string): Promise<Sale> {
     const sale = await this.validateSaleExists(saleId);
-   
+
     if (sale.status !== SaleStatus.DELIVERED) {
       throw new BadRequestException('Sale must be delivered before completing');
     }
@@ -306,7 +306,7 @@ export class SalesStateService {
 
   async cancelSale(dto: CancelSaleDto, userId: string): Promise<Sale> {
     const sale = await this.validateSaleExists(dto.saleId);
-    
+
     if (sale.status === SaleStatus.COMPLETED || sale.status === SaleStatus.CANCELLED) {
       throw new BadRequestException('Cannot cancel a completed or already cancelled sale');
     }
@@ -379,4 +379,4 @@ export class SalesStateService {
       await queryRunner.release();
     }
   }
-} 
+}

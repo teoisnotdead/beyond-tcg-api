@@ -99,6 +99,7 @@ export class SalesStateService {
       sale.buyer_id = userId;
       sale.reserved_at = new Date();
       sale.quantity = quantity;
+      sale.reserved_quantity = quantity;
       await queryRunner.manager.save(sale);
       await queryRunner.commitTransaction();
 
@@ -178,6 +179,7 @@ export class SalesStateService {
       throw new BadRequestException('Sale has no buyer assigned');
     }
     await this.validateUserCanModifySale(sale, userId, 'buyer');
+    sale.reserved_quantity = sale.reserved_quantity ?? sale.quantity;
     sale.status = SaleStatus.DELIVERED;
     sale.delivery_proof_url = dto.deliveryProofUrl;
     sale.delivered_at = new Date();
@@ -214,6 +216,8 @@ export class SalesStateService {
       return sale;
     }
 
+    const quantityToRecord = sale.reserved_quantity ?? sale.quantity;
+
     sale.status = SaleStatus.COMPLETED;
     sale.completed_at = new Date();
     const updatedSale = await this.salesRepository.save(sale);
@@ -236,7 +240,7 @@ export class SalesStateService {
         sale.description,
         sale.price,
         sale.image_url,
-        sale.quantity,
+        quantityToRecord,
         sale.language.id,
         sale.category.id
       ]);
@@ -262,6 +266,7 @@ export class SalesStateService {
       throw new BadRequestException('Sale has no buyer assigned');
     }
     await this.validateUserCanModifySale(sale, userId, 'seller');
+    const quantityToRecord = sale.reserved_quantity ?? sale.quantity;
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -282,7 +287,7 @@ export class SalesStateService {
         sale.description,
         sale.price,
         sale.image_url,
-        sale.quantity,
+        quantityToRecord,
         sale.language.id,
         sale.category.id
       ]);

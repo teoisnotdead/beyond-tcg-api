@@ -51,6 +51,9 @@ export class Sale {
   @Column()
   quantity: number;
 
+  @Column({ nullable: true })
+  reserved_quantity?: number;
+
   @Column({
     type: 'enum',
     enum: SaleStatus,

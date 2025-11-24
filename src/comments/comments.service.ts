@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
@@ -79,11 +79,36 @@ export class CommentsService {
   }
 
   async subscribeToSaleComments(userId: string, saleId: string): Promise<CommentSubscription> {
+    const existingSubscription = await this.subscriptionRepository.findOne({
+      where: { user: { id: userId }, sale: { id: saleId } },
+    });
+
+    if (existingSubscription) {
+      return existingSubscription;
+    }
+
     const subscription = this.subscriptionRepository.create({
       user: { id: userId },
       sale: { id: saleId }
     });
-    return this.subscriptionRepository.save(subscription);
+
+    try {
+      return await this.subscriptionRepository.save(subscription);
+    } catch (error) {
+      if (error?.code === '23505') {
+        const duplicateSubscription = await this.subscriptionRepository.findOne({
+          where: { user: { id: userId }, sale: { id: saleId } },
+        });
+
+        if (duplicateSubscription) {
+          return duplicateSubscription;
+        }
+
+        throw new ConflictException('Subscription to sale comments already exists');
+      }
+
+      throw error;
+    }
   }
 
   async unsubscribeFromSaleComments(userId: string, saleId: string): Promise<void> {

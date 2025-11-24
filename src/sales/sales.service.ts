@@ -154,8 +154,8 @@ export class SalesService {
     return { message: 'Sale deleted successfully' };
   }
 
-  async reserveSale(saleId: string, buyerId: string) {
-    const sale = await this.salesRepository.findOne({ 
+  async reserveSale(saleId: string, buyerId: string, quantity?: number) {
+    const sale = await this.salesRepository.findOne({
       where: { id: saleId },
       relations: ['seller', 'buyer']
     });
@@ -164,8 +164,13 @@ export class SalesService {
     if (!sale.seller) throw new BadRequestException('Sale has no seller assigned');
     if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot reserve your own sale');
     if (sale.buyer_id) throw new BadRequestException('Sale is already reserved by another user');
+    const reservedQuantity = quantity ?? sale.quantity;
+    if (reservedQuantity <= 0) throw new BadRequestException('Quantity must be greater than 0');
+    if (reservedQuantity > sale.quantity) throw new BadRequestException('Not enough stock to reserve');
+
     sale.status = SaleStatus.RESERVED;
     sale.buyer_id = buyerId;
+    sale.reserved_quantity = reservedQuantity;
     sale.reserved_at = new Date();
     await this.salesRepository.save(sale);
     return { message: 'Sale reserved successfully' };
@@ -181,7 +186,13 @@ export class SalesService {
     if (sale.seller.id !== sellerId) throw new ForbiddenException('Only the seller can mark the sale as shipped');
     if (sale.status !== SaleStatus.RESERVED) throw new BadRequestException('Sale must be reserved before shipping');
     if (!sale.buyer_id) throw new BadRequestException('Sale must have a buyer to be shipped');
-    
+
+    const reservedQuantity = sale.reserved_quantity ?? sale.quantity;
+    if (reservedQuantity > sale.quantity) {
+      throw new BadRequestException('Reserved quantity exceeds available stock');
+    }
+    sale.reserved_quantity = reservedQuantity;
+
     sale.status = SaleStatus.SHIPPED;
     sale.shipping_proof_url = shippingProofUrl;
     sale.shipped_at = new Date();
@@ -190,26 +201,57 @@ export class SalesService {
   }
 
   async confirmDelivery(saleId: string, buyerId: string, deliveryProofUrl: string) {
-    const sale = await this.salesRepository.findOne({ 
-      where: { id: saleId }, 
-      relations: ['seller', 'buyer'] 
+    const sale = await this.salesRepository.findOne({
+      where: { id: saleId },
+      relations: ['seller', 'buyer']
     });
     
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id === buyerId) throw new ForbiddenException('You cannot confirm delivery of your own sale');
     if (sale.status !== SaleStatus.SHIPPED) throw new BadRequestException('Sale must be shipped before confirming delivery');
     if (sale.buyer_id !== buyerId) throw new ForbiddenException('Only the buyer can confirm delivery');
-    
-    sale.status = SaleStatus.COMPLETED;
-    sale.delivery_proof_url = deliveryProofUrl;
-    sale.completed_at = new Date();
-    await this.salesRepository.save(sale);
 
-    // Create the purchase record
+    const reservedQuantity = sale.reserved_quantity ?? sale.quantity;
+    if (reservedQuantity <= 0) {
+      throw new BadRequestException('Reserved quantity must be greater than 0');
+    }
+    if (reservedQuantity > sale.quantity) {
+      throw new BadRequestException('Reserved quantity exceeds available stock');
+    }
+
+    // Register the purchase using the agreed quantity
     await this.purchasesService.create(buyerId, {
       sale_id: sale.id,
-      quantity: sale.quantity,
+      quantity: reservedQuantity,
     });
+
+    // Reload sale to work with updated inventory
+    const updatedSale = await this.salesRepository.findOne({
+      where: { id: saleId },
+      relations: ['seller', 'buyer'],
+    });
+
+    if (!updatedSale) throw new NotFoundException('Sale not found');
+
+    updatedSale.delivery_proof_url = deliveryProofUrl;
+    updatedSale.delivered_at = new Date();
+    updatedSale.reserved_quantity = reservedQuantity;
+
+    if (updatedSale.quantity === 0) {
+      updatedSale.status = SaleStatus.COMPLETED;
+      updatedSale.completed_at = new Date();
+    } else {
+      updatedSale.status = SaleStatus.AVAILABLE;
+      updatedSale.buyer_id = undefined;
+      updatedSale.shipping_proof_url = undefined;
+      updatedSale.delivery_proof_url = undefined;
+      updatedSale.reserved_quantity = undefined;
+      updatedSale.reserved_at = undefined;
+      updatedSale.shipped_at = undefined;
+      updatedSale.delivered_at = undefined;
+    }
+
+    await this.salesRepository.save(updatedSale);
 
     return { message: 'Sale completed and purchase registered.' };
   }

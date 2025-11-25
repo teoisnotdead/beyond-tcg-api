@@ -10,11 +10,10 @@ export class SalesAnalysisService {
     @InjectRepository(Sale)
     private readonly salesRepository: Repository<Sale>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async generateAnalysis(userId: string, filters: SalesAnalysisFilterDto): Promise<SalesAnalysisDto> {
-    const whereClause = this.buildWhereClause(userId, filters);
-    const parameters = this.buildQueryParameters(userId, filters);
+    const { whereClause, parameters } = this.buildQueryComponents(userId, filters);
 
     // Generar todos los análisis
     const [trends, priceAnalysis, categoryAnalysis, userBehavior] = await Promise.all([
@@ -43,13 +42,13 @@ export class SalesAnalysisService {
     const query = `
       WITH period_data AS (
         SELECT
-          DATE_TRUNC('${period}', created_at) as period,
+          DATE_TRUNC('${period}', s.created_at) as period,
           COUNT(*) as total_sales,
-          SUM(price * quantity) as total_revenue,
-          AVG(price * quantity) as average_price
-        FROM sales
+          SUM(s.price * s.quantity) as total_revenue,
+          AVG(s.price * s.quantity) as average_price
+        FROM sales s
         WHERE 1=1 ${whereClause}
-        GROUP BY DATE_TRUNC('${period}', created_at)
+        GROUP BY DATE_TRUNC('${period}', s.created_at)
         ORDER BY period DESC
         LIMIT ${periods}
       ),
@@ -110,7 +109,7 @@ export class SalesAnalysisService {
     `;
 
     const [result] = await this.dataSource.query(query, parameters);
-    return result.trends;
+    return result?.trends || {};
   }
 
   private async analyzePrices(whereClause: string, parameters: any[]) {
@@ -131,25 +130,25 @@ export class SalesAnalysisService {
       price_ranges AS (
         SELECT
           CASE
-            WHEN price * quantity < 10 THEN '0-10'
-            WHEN price * quantity < 50 THEN '10-50'
-            WHEN price * quantity < 100 THEN '50-100'
-            WHEN price * quantity < 500 THEN '100-500'
+            WHEN s.price * s.quantity < 10 THEN '0-10'
+            WHEN s.price * s.quantity < 50 THEN '10-50'
+            WHEN s.price * s.quantity < 100 THEN '50-100'
+            WHEN s.price * s.quantity < 500 THEN '100-500'
             ELSE '500+'
           END as range,
           COUNT(*) as count
-        FROM sales
+        FROM sales s
         WHERE 1=1 ${whereClause}
         GROUP BY range
       ),
       price_correlations AS (
         SELECT
-          CORR(price * quantity, 1) as price_vs_sales,
+          CORR(s.price * s.quantity, 1) as price_vs_sales,
           CORR(
-            price * quantity,
-            CASE WHEN status = 'completed' THEN 1 ELSE 0 END
+            s.price * s.quantity,
+            CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END
           ) as price_vs_conversion
-        FROM sales
+        FROM sales s
         WHERE 1=1 ${whereClause}
       )
       SELECT
@@ -188,7 +187,7 @@ export class SalesAnalysisService {
     `;
 
     const [result] = await this.dataSource.query(query, parameters);
-    return result.price_analysis;
+    return result?.price_analysis || {};
   }
 
   private async analyzeCategories(whereClause: string, parameters: any[]) {
@@ -199,7 +198,7 @@ export class SalesAnalysisService {
           c.name as category_name,
           COUNT(*) as total_sales,
           COUNT(CASE WHEN s.status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0) as conversion_rate,
-          AVG(EXTRACT(EPOCH FROM (s.updated_at - s.created_at))/3600) as average_time_to_sell,
+          AVG(EXTRACT(EPOCH FROM (s.completed_at - s.created_at))/3600) as average_time_to_sell,
           COUNT(CASE WHEN s.status = 'cancelled' THEN 1 END)::float / NULLIF(COUNT(*), 0) as return_rate
         FROM sales s
         JOIN categories c ON c.id = s.category_id
@@ -224,12 +223,12 @@ export class SalesAnalysisService {
           SUM(CASE WHEN row_num <= 3 THEN total_sales ELSE 0 END)::float / NULLIF(SUM(total_sales), 0) as top_categories_share
         FROM (
           SELECT
-            category_id,
+            s.category_id,
             COUNT(*) as total_sales,
             ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) as row_num
-          FROM sales
+          FROM sales s
           WHERE 1=1 ${whereClause}
-          GROUP BY category_id
+          GROUP BY s.category_id
         ) ranked_categories
       )
       SELECT
@@ -274,50 +273,74 @@ export class SalesAnalysisService {
     `;
 
     const [result] = await this.dataSource.query(query, parameters);
-    return result.category_analysis;
+    return result?.category_analysis || {};
   }
 
   private async analyzeUserBehavior(whereClause: string, parameters: any[]) {
     const query = `
       WITH seller_metrics AS (
         SELECT
-          AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/3600) as average_listing_time,
-          AVG(EXTRACT(EPOCH FROM (reserved_at - created_at))/3600) as average_response_time,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0) as completion_rate,
-          COUNT(CASE WHEN status = 'cancelled' THEN 1 END)::float / NULLIF(COUNT(*), 0) as cancellation_rate
-        FROM sales
+          AVG(EXTRACT(EPOCH FROM (s.completed_at - s.created_at))/3600) as average_listing_time,
+          AVG(EXTRACT(EPOCH FROM (s.reserved_at - s.created_at))/3600) as average_response_time,
+          COUNT(CASE WHEN s.status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0) as completion_rate,
+          COUNT(CASE WHEN s.status = 'cancelled' THEN 1 END)::float / NULLIF(COUNT(*), 0) as cancellation_rate
+        FROM sales s
         WHERE 1=1 ${whereClause}
       ),
-      buyer_metrics AS (
+      buyer_category_stats AS (
         SELECT
-          AVG(price * quantity) as average_purchase_value,
-          COUNT(*)::float / NULLIF(DATE_PART('day', MAX(created_at) - MIN(created_at)), 0) as purchase_frequency,
-          json_agg(
-            jsonb_build_object(
-              'category_id', c.id,
-              'category_name', c.name,
-              'purchase_count', COUNT(*),
-              'total_spent', SUM(s.price * s.quantity)
-            )
-          ) as category_preference
+          s.buyer_id,
+          c.id as category_id,
+          c.name as category_name,
+          COUNT(*) as purchase_count,
+          SUM(s.price * s.quantity) as total_spent
         FROM sales s
         JOIN categories c ON c.id = s.category_id
         WHERE 1=1 ${whereClause}
-        GROUP BY buyer_id
+        GROUP BY s.buyer_id, c.id, c.name
+      ),
+      buyer_metrics AS (
+        SELECT
+          s.buyer_id,
+          AVG(s.price * s.quantity) as average_purchase_value,
+          COUNT(*)::float / NULLIF(DATE_PART('day', MAX(s.created_at) - MIN(s.created_at)), 0) as purchase_frequency,
+          (
+            SELECT json_agg(
+              jsonb_build_object(
+                'category_id', bcs.category_id,
+                'category_name', bcs.category_name,
+                'purchase_count', bcs.purchase_count,
+                'total_spent', bcs.total_spent
+              )
+            )
+            FROM buyer_category_stats bcs
+            WHERE bcs.buyer_id IS NOT DISTINCT FROM s.buyer_id
+          ) as category_preference
+        FROM sales s
+        WHERE 1=1 ${whereClause}
+        GROUP BY s.buyer_id
+      ),
+      interaction_stats AS (
+        SELECT
+          EXTRACT(HOUR FROM s.created_at) as hour,
+          COUNT(CASE WHEN s.status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0) as conversion_rate
+        FROM sales s
+        WHERE 1=1 ${whereClause}
+        GROUP BY EXTRACT(HOUR FROM s.created_at)
       ),
       interaction_metrics AS (
         SELECT
-          AVG(views_count) as average_views_per_listing,
-          AVG(offers_count) as average_offers_per_listing,
-          json_agg(
-            jsonb_build_object(
-              'hour', EXTRACT(HOUR FROM created_at),
-              'conversion_rate', COUNT(CASE WHEN status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0)
+          (SELECT AVG(s.views) FROM sales s WHERE 1=1 ${whereClause}) as average_views_per_listing,
+          (SELECT 0 FROM sales s WHERE 1=1 ${whereClause} LIMIT 1) as average_offers_per_listing,
+          (
+            SELECT json_agg(
+              jsonb_build_object(
+                'hour', hour,
+                'conversion_rate', conversion_rate
+              )
             )
+            FROM interaction_stats
           ) as conversion_by_time_of_day
-        FROM sales
-        WHERE 1=1 ${whereClause}
-        GROUP BY EXTRACT(HOUR FROM created_at)
       )
       SELECT
         jsonb_build_object(
@@ -337,6 +360,7 @@ export class SalesAnalysisService {
               'category_preference', category_preference
             )
             FROM buyer_metrics
+            LIMIT 1
           ),
           'interaction_metrics', (
             SELECT jsonb_build_object(
@@ -350,74 +374,57 @@ export class SalesAnalysisService {
     `;
 
     const [result] = await this.dataSource.query(query, parameters);
-    return result.user_behavior;
+    return result?.user_behavior || {};
   }
 
-  private buildWhereClause(userId: string, filters: SalesAnalysisFilterDto): string {
+  private buildQueryComponents(userId: string, filters: SalesAnalysisFilterDto): { whereClause: string; parameters: any[] } {
     const conditions: string[] = [];
+    const parameters: any[] = [];
+    let paramIndex = 1;
 
     if (userId) {
-      conditions.push('(seller_id = :userId OR buyer_id = :userId)');
+      conditions.push(`(s.seller_id = $${paramIndex} OR s.buyer_id = $${paramIndex})`);
+      parameters.push(userId);
+      paramIndex++;
     }
 
     if (filters.start_date) {
-      conditions.push('created_at >= :startDate');
+      conditions.push(`s.created_at >= $${paramIndex}`);
+      parameters.push(new Date(filters.start_date));
+      paramIndex++;
     }
 
     if (filters.end_date) {
-      conditions.push('created_at <= :endDate');
+      conditions.push(`s.created_at <= $${paramIndex}`);
+      parameters.push(new Date(filters.end_date));
+      paramIndex++;
     }
 
     if (filters.category_ids?.length) {
-      conditions.push('category_id = ANY(:categoryIds)');
+      conditions.push(`s.category_id = ANY($${paramIndex})`);
+      parameters.push(filters.category_ids);
+      paramIndex++;
     }
 
     if (filters.store_ids?.length) {
-      conditions.push('store_id = ANY(:storeIds)');
+      conditions.push(`s.store_id = ANY($${paramIndex})`);
+      parameters.push(filters.store_ids);
+      paramIndex++;
     }
 
     if (filters.min_price !== undefined) {
-      conditions.push('price * quantity >= :minPrice');
+      conditions.push(`s.price * s.quantity >= $${paramIndex}`);
+      parameters.push(filters.min_price);
+      paramIndex++;
     }
 
     if (filters.max_price !== undefined) {
-      conditions.push('price * quantity <= :maxPrice');
+      conditions.push(`s.price * s.quantity <= $${paramIndex}`);
+      parameters.push(filters.max_price);
+      paramIndex++;
     }
 
-    return conditions.length ? 'AND ' + conditions.join(' AND ') : '';
+    const whereClause = conditions.length ? 'AND ' + conditions.join(' AND ') : '';
+    return { whereClause, parameters };
   }
-
-  private buildQueryParameters(userId: string, filters: SalesAnalysisFilterDto): any[] {
-    const parameters: any = {};
-
-    if (userId) {
-      parameters.userId = userId;
-    }
-
-    if (filters.start_date) {
-      parameters.startDate = new Date(filters.start_date);
-    }
-
-    if (filters.end_date) {
-      parameters.endDate = new Date(filters.end_date);
-    }
-
-    if (filters.category_ids?.length) {
-      parameters.categoryIds = filters.category_ids;
-    }
-
-    if (filters.store_ids?.length) {
-      parameters.storeIds = filters.store_ids;
-    }
-
-    if (filters.min_price !== undefined) {
-      parameters.minPrice = filters.min_price;
-    }
-
-    if (filters.max_price !== undefined) {
-      parameters.maxPrice = filters.max_price;
-    }
-
-    return [parameters];
-  }
-} 
+}

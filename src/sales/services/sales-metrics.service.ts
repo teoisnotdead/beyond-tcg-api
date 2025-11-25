@@ -13,12 +13,31 @@ export class SalesMetricsService {
     @InjectRepository(Purchase)
     private readonly purchasesRepository: Repository<Purchase>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async getSalesMetrics(userId: string, startDate?: Date, endDate?: Date): Promise<SalesMetricsDto> {
-    const whereClause = this.buildDateFilterClause(startDate, endDate);
-    const userFilter = userId ? 'AND (s.seller_id = :userId OR s.buyer_id = :userId)' : '';
-    const parameters = this.buildQueryParameters(userId, startDate, endDate);
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    let userFilter = '';
+    if (userId) {
+      userFilter = `AND (s.seller_id = $${paramIndex} OR s.buyer_id = $${paramIndex})`;
+      params.push(userId);
+      paramIndex++;
+    }
+
+    const conditions: string[] = [];
+    if (startDate) {
+      conditions.push(`created_at >= $${paramIndex}`);
+      params.push(startDate);
+      paramIndex++;
+    }
+    if (endDate) {
+      conditions.push(`created_at <= $${paramIndex}`);
+      params.push(endDate);
+      paramIndex++;
+    }
+    const whereClause = conditions.length ? 'AND ' + conditions.join(' AND ') : '';
 
     // Base query for all metrics
     const metricsQuery = `
@@ -103,7 +122,7 @@ export class SalesMetricsService {
       ) sts
     `;
 
-    const [metrics] = await this.dataSource.query(metricsQuery, parameters);
+    const [metrics] = await this.dataSource.query(metricsQuery, params);
 
     return {
       total_sales: parseInt(metrics.total_sales) || 0,
@@ -145,36 +164,4 @@ export class SalesMetricsService {
       store_performance: metrics.store_performance || [],
     };
   }
-
-  private buildDateFilterClause(startDate?: Date, endDate?: Date): string {
-    const conditions: string[] = [];
-
-    if (startDate) {
-      conditions.push('created_at >= :startDate');
-    }
-
-    if (endDate) {
-      conditions.push('created_at <= :endDate');
-    }
-
-    return conditions.length ? 'AND ' + conditions.join(' AND ') : '';
-  }
-
-  private buildQueryParameters(userId: string, startDate?: Date, endDate?: Date): any[] {
-    const parameters: any[] = [];
-
-    if (userId) {
-      parameters.push(userId);
-    }
-
-    if (startDate) {
-      parameters.push(startDate);
-    }
-
-    if (endDate) {
-      parameters.push(endDate);
-    }
-
-    return parameters;
-  }
-} 
+}

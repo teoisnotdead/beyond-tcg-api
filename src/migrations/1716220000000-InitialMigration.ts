@@ -117,6 +117,7 @@ export class InitialMigration1716220000000 implements MigrationInterface {
         price DECIMAL(10, 2) NOT NULL,
         image_url VARCHAR(255),
         quantity INTEGER NOT NULL CHECK (quantity >= 0),
+        reserved_quantity INTEGER,
         original_quantity INTEGER NOT NULL CHECK (original_quantity >= quantity),
         parent_sale_id UUID REFERENCES sales(id) ON DELETE SET NULL,
         status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'shipped', 'delivered', 'completed', 'cancelled')),
@@ -513,7 +514,7 @@ export class InitialMigration1716220000000 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS idx_sales_cancelled_cancelled_at`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_sales_cancelled_store_id`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_sales_cancelled_seller_id`);
-    
+
     // Eliminar tablas
     await queryRunner.query(`DROP TABLE IF EXISTS sales_cancelled`);
     await queryRunner.query(`DROP TABLE IF EXISTS purchases`);

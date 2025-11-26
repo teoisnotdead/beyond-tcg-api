@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req, UseGuards, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, UseGuards, Res, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -9,11 +9,12 @@ import { Response } from 'express';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
+  @HttpCode(200)
   @ApiOperation({ summary: 'User login' })
-  @ApiResponse({ status: 201, description: 'Login successful, returns access_token and user data.' })
+  @ApiResponse({ status: 200, description: 'Login successful, returns access_token and user data.' })
   @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);

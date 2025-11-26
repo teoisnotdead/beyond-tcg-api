@@ -18,8 +18,8 @@ export interface SaleListItem {
   quantity: number;
   status: string;
   views: number;
-  category: { id: string } | null;
-  language: { id: string } | null;
+  category: { id: string; name: string } | null;
+  language: { id: string; name: string } | null;
   shipping_proof_url?: string | null;
   delivery_proof_url?: string | null;
   reserved_at?: Date | null;
@@ -123,8 +123,8 @@ export class SalesService {
       data: sales.map(sale => ({
         ...sale,
         seller: { id: sale.seller.id },
-        category: sale.category ? { id: sale.category.id } : null,
-        language: sale.language ? { id: sale.language.id } : null,
+        category: sale.category ? { id: sale.category.id, name: sale.category.name } : null,
+        language: sale.language ? { id: sale.language.id, name: sale.language.name } : null,
       })),
       total,
       page,
@@ -335,8 +335,8 @@ export class SalesService {
       sales: sales.map(sale => ({
         ...sale,
         seller: { id: sale.seller.id },
-        category: sale.category ? { id: sale.category.id } : null,
-        language: sale.language ? { id: sale.language.id } : null,
+        category: sale.category ? { id: sale.category.id, name: sale.category.name } : null,
+        language: sale.language ? { id: sale.language.id, name: sale.language.name } : null,
       })),
       totalPages: Math.ceil(total / Number(limit)),
       currentPage: typeof offset !== 'undefined' ? Math.floor(skip / Number(limit)) + 1 : Number(page),

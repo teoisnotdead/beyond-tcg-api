@@ -23,6 +23,7 @@
     "migration:generate": "ts-node ./node_modules/typeorm/cli migration:generate -d src/config/typeorm.config.ts",
     "migration:run": "ts-node ./node_modules/typeorm/cli migration:run -d src/config/typeorm.config.ts",
     "migration:revert": "ts-node ./node_modules/typeorm/cli migration:revert -d src/config/typeorm.config.ts",
+    "seed:dev": "ts-node src/scripts/seed-dev-data.ts",
     "test:int": "jest --config ./test/jest-int.json",
     "test:db:up": "docker-compose -f docker-compose.test.yml up -d",
     "test:db:down": "docker-compose -f docker-compose.test.yml down"
@@ -31,9 +32,9 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
-    "@nestjs/passport": "^11.0.1",
     "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/jwt": "^11.0.0",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.0",
     "@nestjs/platform-socket.io": "^11.1.1",
     "@nestjs/schedule": "^6.0.0",

@@ -16,6 +16,6 @@ export class HeadersModule {
         { path: 'api/docs', method: RequestMethod.GET },
         { path: 'api/docs-json', method: RequestMethod.GET },
       )
-      .forRoutes('*');
+      .forRoutes({ path: '*path', method: RequestMethod.ALL });
   }
 } 

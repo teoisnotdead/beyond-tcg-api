@@ -67,7 +67,7 @@ describe('AuthController', () => {
             await controller.googleAuthRedirect(req, res);
 
             expect(authService.googleLogin).toHaveBeenCalledWith(req.user);
-            expect(res.redirect).toHaveBeenCalledWith('http://localhost:4200/auth/callback?token=token');
+            expect(res.redirect).toHaveBeenCalledWith('http://localhost:3000/auth/callback?token=token');
         });
     });
 });

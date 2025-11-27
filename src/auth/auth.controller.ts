@@ -39,6 +39,6 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res: Response) {
     const result = await this.authService.googleLogin(req.user);
     // Redirige al frontend con el token como query param
-    return res.redirect(`http://localhost:4200/auth/callback?token=${result.access_token}`);
+    return res.redirect(`http://localhost:3000/auth/callback?token=${result.access_token}`);
   }
 }

@@ -1,12 +1,12 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, Patch, Query, NotFoundException, BadRequestException, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, Patch, Query, NotFoundException, BadRequestException, UploadedFiles } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { SubscriptionValidationService } from '../subscriptions/subscription-validation.service';
 import { CommentsService } from '../comments/comments.service';
-import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SalesStateService } from './services/sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
@@ -41,22 +41,36 @@ export class SalesController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('image'))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: 'Son Goku - FB04-129' },
+        description: { type: 'string', example: 'Championship 2025-2026 Finals - Tournament and Championship Promos' },
+        price: { type: 'number', example: 2300000 },
+        quantity: { type: 'number', example: 1 },
+        category_id: { type: 'string', format: 'uuid' },
+        language_id: { type: 'string', format: 'uuid' },
+        store_id: { type: 'string', format: 'uuid' },
+        image_url: { type: 'string', example: 'https://res.cloudinary.com/.../image.jpg' },
+      },
+      required: ['name', 'description', 'price', 'quantity', 'category_id', 'language_id', 'image_url'],
+    },
+  })
   @ApiOperation({ summary: 'Create a new sale' })
   @ApiResponse({ status: 201, description: 'Sale created successfully.' })
   async create(
     @Request() req: AuthRequest,
     @Body() createSaleDto: CreateSaleDto,
-    @UploadedFile() image: Express.Multer.File
   ) {
-    if (!image) {
-      throw new BadRequestException('The image is required');
+    if (!createSaleDto.image_url) {
+      throw new BadRequestException('The image_url is required');
     }
     const canCreate = await this.subscriptionValidationService.canCreateSale(req.user.id);
     if (!canCreate) {
       throw new ForbiddenException('You have reached the limit of active sales according to your subscription plan.');
     }
-    return this.salesService.create(req.user.id, createSaleDto, image);
+    return this.salesService.create(req.user.id, createSaleDto);
   }
 
   @Get()
@@ -91,16 +105,29 @@ export class SalesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('image'))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        price: { type: 'number' },
+        quantity: { type: 'number' },
+        category_id: { type: 'string', format: 'uuid' },
+        language_id: { type: 'string', format: 'uuid' },
+        store_id: { type: 'string', format: 'uuid' },
+        image_url: { type: 'string' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Update a sale' })
   @ApiResponse({ status: 200, description: 'Sale updated successfully.' })
   async update(
     @Param('id') id: string,
     @Request() req: AuthRequest,
     @Body() updateSaleDto: UpdateSaleDto,
-    @UploadedFile() image?: Express.Multer.File
   ) {
-    return this.salesService.update(id, req.user.id, updateSaleDto, image);
+    return this.salesService.update(id, req.user.id, updateSaleDto);
   }
 
   @Post(':id/relist')

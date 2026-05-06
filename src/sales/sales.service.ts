@@ -49,31 +49,19 @@ export class SalesService {
     });
   }
 
-  async create(userId: string, createSaleDto: CreateSaleDto, image?: Express.Multer.File): Promise<Sale> {
-    let imageUrl: string | undefined = undefined;
-    let uploadedImageResult: any = null;
-    try {
-      if (image) {
-        uploadedImageResult = await this.cloudinaryService.uploadImage(image, 'Beyond TCG/sales');
-        imageUrl = uploadedImageResult.secure_url;
-      }
-      const sale = this.salesRepository.create({
-        ...createSaleDto,
-        seller: { id: userId },
-        status: SaleStatus.AVAILABLE,
-        image_url: imageUrl,
-        category: { id: createSaleDto.category_id },
-        language: { id: createSaleDto.language_id },
-        original_quantity: createSaleDto.quantity
-      });
-      return await this.salesRepository.save(sale);
-    } catch (error) {
-      // if the image was uploaded but the sale failed, delete the image from Cloudinary
-      if (uploadedImageResult && uploadedImageResult.public_id) {
-        await this.cloudinaryService.deleteImage(uploadedImageResult.public_id);
-      }
-      throw error;
-    }
+  async create(userId: string, createSaleDto: CreateSaleDto): Promise<Sale> {
+    const { image_url, ...restCreateSaleDto } = createSaleDto as any;
+    const sale = this.salesRepository.create({
+      ...restCreateSaleDto,
+      seller: { id: userId },
+      status: SaleStatus.AVAILABLE,
+      image_url,
+      category: { id: createSaleDto.category_id },
+      language: { id: createSaleDto.language_id },
+      original_quantity: createSaleDto.quantity
+    });
+    const savedSale = await this.salesRepository.save(sale as any);
+    return savedSale as Sale;
   }
 
   async findAll(
@@ -122,6 +110,7 @@ export class SalesService {
     return {
       data: sales.map(sale => ({
         ...sale,
+        price: Number(sale.price),
         seller: { id: sale.seller.id },
         category: sale.category ? { id: sale.category.id, name: sale.category.name } : null,
         language: sale.language ? { id: sale.language.id, name: sale.language.name } : null,
@@ -334,6 +323,7 @@ export class SalesService {
     return {
       sales: sales.map(sale => ({
         ...sale,
+        price: Number(sale.price),
         seller: { id: sale.seller.id },
         category: sale.category ? { id: sale.category.id, name: sale.category.name } : null,
         language: sale.language ? { id: sale.language.id, name: sale.language.name } : null,
@@ -344,32 +334,16 @@ export class SalesService {
     };
   }
 
-  async update(saleId: string, userId: string, updateSaleDto: UpdateSaleDto, image?: Express.Multer.File): Promise<any> {
+  async update(saleId: string, userId: string, updateSaleDto: UpdateSaleDto): Promise<any> {
     const sale = await this.salesRepository.findOne({ where: { id: saleId }, relations: ['seller'] });
     if (!sale) throw new NotFoundException('Sale not found');
     if (sale.seller.id !== userId) throw new ForbiddenException('You are not the seller of this sale');
-    let uploadedImageResult: any = null;
-    try {
-      if (image) {
-        uploadedImageResult = await this.cloudinaryService.updateImage(
-          image,
-          sale.image_url || null,
-          'Beyond TCG/sales'
-        );
-        updateSaleDto.image_url = uploadedImageResult.secure_url;
-      }
-      Object.assign(sale, updateSaleDto);
-      const savedSale = await this.salesRepository.save(sale);
-      return {
-        ...savedSale,
-        seller: { id: savedSale.seller.id },
-      };
-    } catch (error) {
-      if (uploadedImageResult && uploadedImageResult.public_id) {
-        await this.cloudinaryService.deleteImage(uploadedImageResult.public_id);
-      }
-      throw error;
-    }
+    Object.assign(sale, updateSaleDto);
+    const savedSale = await this.salesRepository.save(sale);
+    return {
+      ...savedSale,
+      seller: { id: savedSale.seller.id },
+    };
   }
 
   async relistSale(saleId: string, userId: string, updateData?: Partial<CreateSaleDto>): Promise<Sale> {

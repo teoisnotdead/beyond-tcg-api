@@ -39,16 +39,20 @@ export class FeaturedService {
     const proUserIds = proSubs.map(sub => sub.user_id);
 
     // Get all stores (related to user) that belong to users with Store plan
-    const stores = await this.storesRepository.createQueryBuilder('store')
-      .leftJoinAndSelect('store.user', 'user')
-      .where('user.id IN (:...storeUserIds)', { storeUserIds })
-      .getMany();
+    const stores = storeUserIds.length
+      ? await this.storesRepository.createQueryBuilder('store')
+          .leftJoinAndSelect('store.user', 'user')
+          .where('user.id IN (:...storeUserIds)', { storeUserIds })
+          .getMany()
+      : [];
 
     // Get all users (without store) with Pro plan using queryBuilder to filter by id in proUserIds and is_store = false
-    const proUsers = await this.usersRepository.createQueryBuilder('user')
-      .where('user.id IN (:...proUserIds)', { proUserIds })
-      .andWhere('user.is_store = false')
-      .getMany();
+    const proUsers = proUserIds.length
+      ? await this.usersRepository.createQueryBuilder('user')
+          .where('user.id IN (:...proUserIds)', { proUserIds })
+          .andWhere('user.is_store = false')
+          .getMany()
+      : [];
 
     // For each store, calculate totalViews (sum of views from its sales) and activeSales (sales with status = 'active')
     const featuredStores = await Promise.all(stores.map(async (store) => {

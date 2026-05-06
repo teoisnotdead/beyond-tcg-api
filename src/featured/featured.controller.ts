@@ -1,12 +1,9 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Controller, Get } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { FeaturedService } from './featured.service';
 
 @ApiTags('featured')
-@ApiBearerAuth()
 @Controller('featured')
-@UseGuards(JwtAuthGuard)
 export class FeaturedController {
   constructor(private readonly featuredService: FeaturedService) {}
 

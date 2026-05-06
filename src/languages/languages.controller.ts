@@ -6,10 +6,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('languages')
 @Controller('languages')
-@UseGuards(JwtAuthGuard)
 export class LanguagesController {
   constructor(private readonly languagesService: LanguagesService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @ApiOperation({ summary: 'Create a new language' })
   @ApiResponse({ status: 201, description: 'Language created successfully' })
@@ -31,6 +31,7 @@ export class LanguagesController {
     return this.languagesService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Update language' })
   @ApiResponse({ status: 200, description: 'Language updated successfully' })
@@ -38,6 +39,7 @@ export class LanguagesController {
     return this.languagesService.update(id, updateLanguageDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @ApiOperation({ summary: 'Delete language' })
   @ApiResponse({ status: 200, description: 'Language deleted successfully' })

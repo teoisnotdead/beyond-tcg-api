@@ -67,16 +67,15 @@ describe('SalesController', () => {
     describe('create', () => {
         it('should create a sale if subscription allows', async () => {
             const req = { user: { id: 'user-1' } };
-            const dto = { name: 'Item' } as any;
-            const file = {} as any;
+            const dto = { name: 'Item', image_url: 'https://example.com/image.jpg' } as any;
 
             subscriptionValidationService.canCreateSale.mockResolvedValue(true);
             salesService.create.mockResolvedValue({ id: 'sale-1' });
 
-            const result = await controller.create(req as any, dto, file);
+            const result = await controller.create(req as any, dto);
 
             expect(subscriptionValidationService.canCreateSale).toHaveBeenCalledWith('user-1');
-            expect(salesService.create).toHaveBeenCalledWith('user-1', dto, file);
+            expect(salesService.create).toHaveBeenCalledWith('user-1', dto);
             expect(result).toEqual({ id: 'sale-1' });
         });
 
@@ -84,12 +83,12 @@ describe('SalesController', () => {
             const req = { user: { id: 'user-1' } };
             subscriptionValidationService.canCreateSale.mockResolvedValue(false);
 
-            await expect(controller.create(req as any, {} as any, {} as any))
+            await expect(controller.create(req as any, { image_url: 'https://example.com/image.jpg' } as any))
                 .rejects.toThrow(ForbiddenException);
         });
 
-        it('should throw BadRequestException if image is missing', async () => {
-            await expect(controller.create({ user: { id: '1' } } as any, {} as any, null as any))
+        it('should throw BadRequestException if image_url is missing', async () => {
+            await expect(controller.create({ user: { id: '1' } } as any, {} as any))
                 .rejects.toThrow(BadRequestException);
         });
     });

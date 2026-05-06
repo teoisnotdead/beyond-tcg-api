@@ -14,9 +14,44 @@ config();
  * - Sample purchases
  * 
  * Usage: npm run seed:dev
+ * Reset and reseed: npm run seed:dev -- --reset
  */
 
+const DEV_SEED_EMAILS = ['buyer@test.com', 'seller@test.com', 'store@test.com'];
+
+async function resetDevelopmentSeedData(queryRunner: any) {
+    console.log('\n🧹 Resetting previous development seed data...');
+
+    const users: Array<{ id: string }> = await queryRunner.query(
+        `SELECT id FROM users WHERE email = ANY($1)`,
+        [DEV_SEED_EMAILS],
+    );
+
+    if (!users.length) {
+        console.log('ℹ️ No previous seeded users found.');
+        return;
+    }
+
+    const userIds = users.map((u) => u.id);
+
+    // stores.user_id has no ON DELETE CASCADE, so remove stores first
+    await queryRunner.query(
+        `DELETE FROM stores WHERE user_id = ANY($1)`,
+        [userIds],
+    );
+
+    // Then remove users; dependent rows cascade in related tables
+    await queryRunner.query(
+        `DELETE FROM users WHERE id = ANY($1)`,
+        [userIds],
+    );
+
+    console.log('✅ Previous development seed data removed.');
+}
+
 async function seedDevelopmentData() {
+    const shouldReset = process.argv.includes('--reset');
+
     const dataSource = new DataSource({
         type: 'postgres',
         host: process.env.DB_HOST || 'localhost',
@@ -31,6 +66,10 @@ async function seedDevelopmentData() {
         console.log('✅ Database connected');
 
         const queryRunner = dataSource.createQueryRunner();
+
+        if (shouldReset) {
+            await resetDevelopmentSeedData(queryRunner);
+        }
 
         // 1. Create test users
         console.log('\n📝 Creating test users...');
@@ -146,6 +185,43 @@ async function seedDevelopmentData() {
         true
       )
       ON CONFLICT DO NOTHING;
+    `);
+
+        // Keep users.current_subscription_id in sync with active subscriptions
+        await queryRunner.query(`
+      UPDATE users
+      SET current_subscription_id = (
+        SELECT us.id
+        FROM usersubscriptions us
+        WHERE us.user_id = '${buyer.id}' AND us.is_active = true
+        ORDER BY us.start_date DESC
+        LIMIT 1
+      )
+      WHERE id = '${buyer.id}';
+    `);
+
+        await queryRunner.query(`
+      UPDATE users
+      SET current_subscription_id = (
+        SELECT us.id
+        FROM usersubscriptions us
+        WHERE us.user_id = '${seller.id}' AND us.is_active = true
+        ORDER BY us.start_date DESC
+        LIMIT 1
+      )
+      WHERE id = '${seller.id}';
+    `);
+
+        await queryRunner.query(`
+      UPDATE users
+      SET current_subscription_id = (
+        SELECT us.id
+        FROM usersubscriptions us
+        WHERE us.user_id = '${storeOwner.id}' AND us.is_active = true
+        ORDER BY us.start_date DESC
+        LIMIT 1
+      )
+      WHERE id = '${storeOwner.id}';
     `);
 
         // 3. Create a store for the store owner

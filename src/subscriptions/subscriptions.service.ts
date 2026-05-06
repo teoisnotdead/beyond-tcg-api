@@ -20,15 +20,31 @@ export class SubscriptionsService {
 
   async getCurrentSubscription(userId: string) {
     const user = await this.usersService.findOne(userId);
-    if (!user.current_subscription_id) {
+    let subscription: UserSubscription | null = null;
+
+    if (user.current_subscription_id) {
+      subscription = await this.userSubscriptionsRepository.findOne({
+        where: { id: user.current_subscription_id }
+      });
+    }
+
+    // Fallback for legacy/inconsistent data where user.current_subscription_id is null
+    // but an active subscription row exists.
+    if (!subscription) {
+      subscription = await this.userSubscriptionsRepository.findOne({
+        where: { user_id: userId, is_active: true },
+        order: { start_date: 'DESC' },
+      });
+
+      if (subscription) {
+        await this.usersService.update(userId, { current_subscription_id: subscription.id });
+      }
+    }
+
+    if (!subscription) {
       throw new NotFoundException('User has no active subscription');
     }
-    const subscription = await this.userSubscriptionsRepository.findOne({
-      where: { id: user.current_subscription_id }
-    });
-    if (!subscription) {
-      throw new NotFoundException('Subscription not found');
-    }
+
     return subscription;
   }
 

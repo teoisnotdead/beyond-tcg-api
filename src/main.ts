@@ -23,13 +23,20 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // Enable CORS
-  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+  const frontendUrls =
+    configService.get<string>('FRONTEND_URLS')
+      ?.split(',')
+      .map((url) => url.trim())
+      .filter(Boolean) || [];
+  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+  const allowedOrigins = frontendUrls.length ? frontendUrls : [frontendUrl, 'http://localhost:3001'];
+
   app.enableCors({
-    origin: frontendUrl,
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
-  console.log(`CORS enabled for: ${frontendUrl}`);
+  console.log(`CORS enabled for: ${allowedOrigins.join(', ')}`);
 
   // Enable global validation
   app.useGlobalPipes(

@@ -99,8 +99,26 @@ describe('SubscriptionsService', () => {
         it('should throw NotFoundException if user has no subscription', async () => {
             const user = { id: 'user-1', current_subscription_id: null };
             usersService.findOne.mockResolvedValue(user);
+            subscriptionsRepository.findOne.mockResolvedValue(null);
 
             await expect(service.getCurrentSubscription('user-1')).rejects.toThrow(NotFoundException);
+        });
+
+        it('should fallback to active subscription when current_subscription_id is null', async () => {
+            const user = { id: 'user-1', current_subscription_id: null };
+            const activeSubscription = { id: 'sub-active', plan_id: 'plan-1', user_id: 'user-1', is_active: true };
+
+            usersService.findOne.mockResolvedValue(user);
+            subscriptionsRepository.findOne.mockResolvedValue(activeSubscription);
+
+            const result = await service.getCurrentSubscription('user-1');
+
+            expect(subscriptionsRepository.findOne).toHaveBeenCalledWith({
+                where: { user_id: 'user-1', is_active: true },
+                order: { start_date: 'DESC' },
+            });
+            expect(usersService.update).toHaveBeenCalledWith('user-1', { current_subscription_id: 'sub-active' });
+            expect(result).toEqual(activeSubscription);
         });
 
         it('should throw NotFoundException if subscription not found', async () => {

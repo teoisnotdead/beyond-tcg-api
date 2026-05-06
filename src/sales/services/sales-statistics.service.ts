@@ -92,10 +92,16 @@ export class SalesStatisticsService {
           COUNT(*) as total_sales,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_sales,
           COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_sales,
-          COUNT(CASE WHEN status = 'active' THEN 1 END) as active_listings,
+          COUNT(CASE WHEN status = 'available' THEN 1 END) as active_listings,
           SUM(price * quantity) as total_revenue,
           AVG(price * quantity) as average_sale_price,
-          AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/3600) as average_time_to_sell,
+          AVG(
+            CASE
+              WHEN completed_at IS NOT NULL
+              THEN EXTRACT(EPOCH FROM (completed_at - created_at)) / 3600
+              ELSE NULL
+            END
+          ) as average_time_to_sell,
           COUNT(CASE WHEN status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0) as conversion_rate
         FROM sales
         WHERE seller_id = $1
@@ -105,14 +111,14 @@ export class SalesStatisticsService {
 
     const [result] = await this.dataSource.query(query, [userId]);
     return {
-      active_listings: parseInt(result.active_listings),
-      completed_sales: parseInt(result.completed_sales),
-      cancelled_sales: parseInt(result.cancelled_sales),
-      total_sales: parseInt(result.total_sales),
-      total_revenue: parseFloat(result.total_revenue),
-      average_sale_price: parseFloat(result.average_sale_price),
-      average_time_to_sell: parseFloat(result.average_time_to_sell),
-      conversion_rate: parseFloat(result.conversion_rate) * 100,
+      active_listings: parseInt(result.active_listings) || 0,
+      completed_sales: parseInt(result.completed_sales) || 0,
+      cancelled_sales: parseInt(result.cancelled_sales) || 0,
+      total_sales: parseInt(result.total_sales) || 0,
+      total_revenue: parseFloat(result.total_revenue) || 0,
+      average_sale_price: parseFloat(result.average_sale_price) || 0,
+      average_time_to_sell: parseFloat(result.average_time_to_sell) || 0,
+      conversion_rate: (parseFloat(result.conversion_rate) || 0) * 100,
     };
   }
 
@@ -123,43 +129,43 @@ export class SalesStatisticsService {
           COUNT(*) as total_orders,
           SUM(price * quantity) as total_spent,
           AVG(price * quantity) as average_order_value
-        FROM sales
-        WHERE buyer_id = $1
+        FROM purchases
+        WHERE user_id = $1
       ),
       category_preferences AS (
         SELECT
           c.id as category_id,
           c.name as category_name,
           COUNT(*) as purchase_count,
-          SUM(s.price * s.quantity) as total_spent
-        FROM sales s
-        JOIN categories c ON c.id = s.category_id
-        WHERE s.buyer_id = $1
+          SUM(p.price * p.quantity) as total_spent
+        FROM purchases p
+        JOIN categories c ON c.id = p.category_id
+        WHERE p.user_id = $1
         GROUP BY c.id, c.name
         ORDER BY purchase_count DESC
         LIMIT 5
       )
       SELECT
         ps.*,
-        json_agg(
+        COALESCE(json_agg(
           jsonb_build_object(
             'category_id', cp.category_id,
             'category_name', cp.category_name,
             'purchase_count', cp.purchase_count,
             'total_spent', cp.total_spent
           )
-        ) as favorite_categories
+        ) FILTER (WHERE cp.category_id IS NOT NULL), '[]'::json) as favorite_categories
       FROM purchase_stats ps
-      CROSS JOIN category_preferences cp
+      LEFT JOIN category_preferences cp ON true
       GROUP BY ps.total_orders, ps.total_spent, ps.average_order_value
     `;
 
     const [result] = await this.dataSource.query(query, [userId]);
     return {
-      total_orders: parseInt(result.total_orders),
-      total_spent: parseFloat(result.total_spent),
-      average_order_value: parseFloat(result.average_order_value),
-      favorite_categories: result.favorite_categories,
+      total_orders: parseInt(result.total_orders) || 0,
+      total_spent: parseFloat(result.total_spent) || 0,
+      average_order_value: parseFloat(result.average_order_value) || 0,
+      favorite_categories: result.favorite_categories || [],
     };
   }
 
@@ -167,22 +173,25 @@ export class SalesStatisticsService {
     const query = `
       WITH activity_stats AS (
         SELECT
-          MAX(updated_at) as last_activity,
+          GREATEST(
+            COALESCE(MAX(s.created_at), 'epoch'::timestamp),
+            COALESCE((SELECT MAX(p.created_at) FROM purchases p WHERE p.user_id = $1), 'epoch'::timestamp)
+          ) as last_activity,
           AVG(EXTRACT(EPOCH FROM (reserved_at - created_at))/3600) as average_response_time,
           COUNT(CASE WHEN status = 'completed' THEN 1 END)::float / NULLIF(COUNT(*), 0) as completion_rate,
           COUNT(CASE WHEN status = 'cancelled' THEN 1 END)::float / NULLIF(COUNT(*), 0) as cancellation_rate
-        FROM sales
-        WHERE seller_id = $1 OR buyer_id = $1
+        FROM sales s
+        WHERE s.seller_id = $1 OR s.buyer_id = $1
       )
       SELECT * FROM activity_stats
     `;
 
     const [result] = await this.dataSource.query(query, [userId]);
     return {
-      last_activity: new Date(result.last_activity),
-      average_response_time: parseFloat(result.average_response_time),
-      completion_rate: parseFloat(result.completion_rate) * 100,
-      cancellation_rate: parseFloat(result.cancellation_rate) * 100,
+      last_activity: result.last_activity ? new Date(result.last_activity) : new Date(0),
+      average_response_time: parseFloat(result.average_response_time) || 0,
+      completion_rate: (parseFloat(result.completion_rate) || 0) * 100,
+      cancellation_rate: (parseFloat(result.cancellation_rate) || 0) * 100,
     };
   }
 
@@ -202,44 +211,54 @@ export class SalesStatisticsService {
         ORDER BY date DESC
       )
       SELECT
-        json_agg(
+        COALESCE(json_agg(
           jsonb_build_object(
             'date', date,
             'count', sales_count,
             'revenue', sales_revenue
           )
-        ) as daily_sales,
-        json_agg(
+        ), '[]'::json) as daily_sales,
+        COALESCE(json_agg(
           jsonb_build_object(
             'date', date,
             'count', purchase_count,
             'spent', purchase_spent
           )
-        ) as daily_purchases
+        ), '[]'::json) as daily_purchases
       FROM daily_stats
     `;
 
     const [result] = await this.dataSource.query(query, [userId]);
     return {
-      daily_sales: result.daily_sales.map(item => ({
+      daily_sales: (result.daily_sales || []).map(item => ({
         date: new Date(item.date).toISOString().split('T')[0],
         count: parseInt(item.count),
-        revenue: parseFloat(item.revenue),
+        revenue: parseFloat(item.revenue) || 0,
       })),
-      daily_purchases: result.daily_purchases.map(item => ({
+      daily_purchases: (result.daily_purchases || []).map(item => ({
         date: new Date(item.date).toISOString().split('T')[0],
         count: parseInt(item.count),
-        spent: parseFloat(item.spent),
+        spent: parseFloat(item.spent) || 0,
       })),
     };
   }
 
   private async getAverageRating(userId: string): Promise<number> {
     const query = `
+      WITH store_ids AS (
+        SELECT id FROM stores WHERE user_id = $1
+      ),
+      ratings AS (
+        SELECT ur.rating::float AS rating
+        FROM userratings ur
+        WHERE ur.user_id = $1
+        UNION ALL
+        SELECT sr.rating::float AS rating
+        FROM storeratings sr
+        WHERE sr.store_id IN (SELECT id FROM store_ids)
+      )
       SELECT AVG(rating) as average_rating
-      FROM sales
-      WHERE (seller_id = $1 OR buyer_id = $1)
-        AND rating IS NOT NULL
+      FROM ratings
     `;
 
     const [result] = await this.dataSource.query(query, [userId]);

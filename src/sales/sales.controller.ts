@@ -67,13 +67,6 @@ export class SalesController {
     return this.salesService.findAll(Number(page), Number(limit), filters);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get sale by ID' })
-  @ApiResponse({ status: 200, description: 'Sale retrieved successfully.' })
-  findOne(@Param('id') id: string) {
-    return this.salesService.findOne(id);
-  }
-
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete sale' })
@@ -446,5 +439,12 @@ export class SalesController {
     @Query() filters: SalesReportFilterDto,
   ): Promise<SalesReportDto> {
     return this.salesReportService.generateReport(req.user.id, filters);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get sale by ID' })
+  @ApiResponse({ status: 200, description: 'Sale retrieved successfully.' })
+  findOne(@Param('id') id: string) {
+    return this.salesService.findOne(id);
   }
 }

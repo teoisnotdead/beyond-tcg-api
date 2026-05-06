@@ -78,6 +78,34 @@ export class UsersController {
     return this.usersService.searchUsers({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, roles });
   }
 
+  @Get('profile/metadata')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get user profile metadata with headers information' })
+  @ApiResponse({ status: 200, description: 'User profile metadata retrieved successfully.' })
+  async getProfileMetadata(
+    @Request() req,
+    @Platform() platform: string,
+    @Channel() channel: string,
+  ) {
+    const user = await this.usersService.findOne(req.user.id);
+    const tier = await this.usersService.getCurrentTier(user.id);
+    
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tier,
+      },
+      metadata: {
+        platform,
+        channel,
+        requestTimestamp: new Date().toISOString(),
+      },
+    };
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get user by ID' })
@@ -129,31 +157,4 @@ export class UsersController {
     return this.commentsService.findAllByAuthor(id);
   }
 
-  @Get('profile/metadata')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get user profile metadata with headers information' })
-  @ApiResponse({ status: 200, description: 'User profile metadata retrieved successfully.' })
-  async getProfileMetadata(
-    @Request() req,
-    @Platform() platform: string,
-    @Channel() channel: string,
-  ) {
-    const user = await this.usersService.findOne(req.user.id);
-    const tier = await this.usersService.getCurrentTier(user.id);
-    
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        tier,
-      },
-      metadata: {
-        platform,
-        channel,
-        requestTimestamp: new Date().toISOString(),
-      },
-    };
-  }
 }

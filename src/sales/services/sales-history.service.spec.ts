@@ -4,6 +4,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Sale } from '../entities/sale.entity';
 import { Purchase } from '../../purchases/entities/purchase.entity';
 import { DataSource } from 'typeorm';
+import { HistoryItemType } from '../dto/sales-history-filter.dto';
+import { SaleStatus } from '../entities/sale.entity';
 
 describe('SalesHistoryService', () => {
     let service: SalesHistoryService;
@@ -114,6 +116,83 @@ describe('SalesHistoryService', () => {
 
             expect(result.items).toEqual([]);
             expect(result.total).toBe(0);
+        });
+
+        it('should build SQL with AND filters and correct LIMIT/OFFSET placeholders', async () => {
+            const mockStats = {
+                total_count: '0',
+                total_revenue: '0',
+                available_count: '0',
+                reserved_count: '0',
+                shipped_count: '0',
+                delivered_count: '0',
+                completed_count: '0',
+                cancelled_count: '0',
+                today_count: '0',
+                week_count: '0',
+                month_count: '0',
+            };
+
+            dataSource.query
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([mockStats]);
+
+            await service.getSalesHistory('user-1', {
+                search: 'charizard',
+                status: SaleStatus.AVAILABLE,
+                type: HistoryItemType.SALE,
+                has_shipping_proof: true,
+                page: 1,
+                limit: 20,
+            });
+
+            const [combinedQuery, params] = dataSource.query.mock.calls[0];
+
+            expect(combinedQuery).toContain('WHERE 1=1');
+            expect(combinedQuery).toContain('AND (name ILIKE $1 OR description ILIKE $1)');
+            expect(combinedQuery).toContain('AND status = $2');
+            expect(combinedQuery).toContain('AND shipping_proof_url IS NOT NULL');
+            expect(combinedQuery).toContain('AND type = $3');
+            expect(combinedQuery).toContain('LIMIT $4 OFFSET $5');
+
+            expect(params).toEqual(['%charizard%', SaleStatus.AVAILABLE, HistoryItemType.SALE, 20, 0]);
+        });
+    });
+
+    describe('private filter builders', () => {
+        it('buildWhereClause should prefix conditions with AND', () => {
+            const whereClause = (service as any).buildWhereClause({
+                search: 'pikachu',
+                min_price: 10,
+            });
+
+            expect(whereClause.startsWith(' AND ')).toBe(true);
+            expect(whereClause).toContain('(name ILIKE $1 OR description ILIKE $1)');
+            expect(whereClause).toContain('price >= $2');
+        });
+
+        it('buildQueryParameters should keep parameter order aligned with SQL', () => {
+            const params = (service as any).buildQueryParameters(
+                {
+                    search: 'pikachu',
+                    category_id: 'cat-1',
+                    min_price: 50,
+                    status: SaleStatus.COMPLETED,
+                    type: HistoryItemType.PURCHASE,
+                },
+                10,
+                20,
+            );
+
+            expect(params).toEqual([
+                '%pikachu%',
+                'cat-1',
+                50,
+                SaleStatus.COMPLETED,
+                HistoryItemType.PURCHASE,
+                10,
+                20,
+            ]);
         });
     });
 });

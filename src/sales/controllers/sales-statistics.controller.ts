@@ -158,7 +158,9 @@ export class SalesStatisticsController {
       where: { id: subscription.plan_id }
     });
 
-    return plan?.features?.has_statistics === true;
+    const features = plan?.features as { statistics?: boolean } | undefined;
+
+    return features?.statistics === true;
   }
 
   @Get('user')

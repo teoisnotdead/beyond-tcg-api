@@ -41,6 +41,9 @@ export class SalesHistoryService {
     } = filters;
     const skip = (page - 1) * limit;
 
+    const parameters = this.buildQueryParameters(filters, limit, skip);
+    const filterParamCount = parameters.length - 2;
+
     // Build base queries for each type
     const [activeSalesQuery, cancelledSalesQuery, purchasesQuery] = await Promise.all([
       this.getActiveSalesQuery(userId, filters),
@@ -65,7 +68,7 @@ export class SalesHistoryService {
       WHERE 1=1
       ${whereClause}
       ${orderClause}
-      LIMIT $${Object.keys(filters).length + 1} OFFSET $${Object.keys(filters).length + 2}
+      LIMIT $${filterParamCount + 1} OFFSET $${filterParamCount + 2}
     `;
 
     // Get total count and stats
@@ -96,9 +99,6 @@ export class SalesHistoryService {
         COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as month_count
       FROM filtered_history
     `;
-
-    // Prepare parameters
-    const parameters = this.buildQueryParameters(filters, limit, skip);
 
     // Execute queries
     const [results, [{ 
@@ -254,7 +254,7 @@ export class SalesHistoryService {
       paramIndex++;
     }
 
-    return conditions.length ? conditions.join(' AND ') : '';
+    return conditions.length ? ` AND ${conditions.join(' AND ')}` : '';
   }
 
   private buildQueryParameters(filters: SalesHistoryFilterDto, limit: number, skip: number): any[] {
@@ -326,7 +326,7 @@ export class SalesHistoryService {
   private async getCategoryInfo(categoryId: string) {
     return this.dataSource
       .createQueryBuilder()
-      .select(['id', 'name', 'description', 'image_url'])
+      .select(['id', 'name', 'description', 'slug'])
       .from('categories', 'c')
       .where('c.id = :categoryId', { categoryId })
       .getRawOne();
@@ -335,7 +335,7 @@ export class SalesHistoryService {
   private async getLanguageInfo(languageId: string) {
     return this.dataSource
       .createQueryBuilder()
-      .select(['id', 'name', 'code', 'flag_url'])
+      .select(['id', 'name', 'slug'])
       .from('languages', 'l')
       .where('l.id = :languageId', { languageId })
       .getRawOne();
@@ -344,7 +344,7 @@ export class SalesHistoryService {
   private async getUserInfo(userId: string) {
     return this.dataSource
       .createQueryBuilder()
-      .select(['id', 'name', 'email', 'avatar_url', 'is_pro'])
+      .select(['id', 'name', 'email', 'avatar_url'])
       .from('users', 'u')
       .where('u.id = :userId', { userId })
       .getRawOne();
@@ -353,7 +353,7 @@ export class SalesHistoryService {
   private async getStoreInfo(storeId: string) {
     return this.dataSource
       .createQueryBuilder()
-      .select(['id', 'name', 'description', 'logo_url', 'banner_url'])
+      .select(['id', 'name', 'description', 'avatar_url', 'banner_url'])
       .from('stores', 's')
       .where('s.id = :storeId', { storeId })
       .getRawOne();
@@ -377,7 +377,7 @@ export class SalesHistoryService {
         's.buyer_id',
         's.store_id',
         's.created_at',
-        's.updated_at',
+        's.created_at as updated_at',
         'NULL as cancelled_at',
         's.completed_at',
         'NULL as cancellation_reason',
@@ -409,12 +409,12 @@ export class SalesHistoryService {
         'sc.buyer_id',
         'sc.store_id',
         'sc.created_at',
-        'sc.updated_at',
+        'sc.created_at as updated_at',
         'sc.cancelled_at',
         'NULL as completed_at',
         'sc.cancellation_reason',
-        'sc.shipping_proof_url',
-        'sc.delivery_proof_url'
+        'NULL as shipping_proof_url',
+        'NULL as delivery_proof_url'
       ])
       .from('sales_cancelled', 'sc')
       .where('sc.seller_id = :userId OR sc.buyer_id = :userId', { userId });

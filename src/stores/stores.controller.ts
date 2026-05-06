@@ -43,6 +43,14 @@ export class StoresController {
     return this.storesService.findAll(Number(page), Number(limit), filters);
   }
 
+  @Get('search')
+  @ApiOperation({ summary: 'Buscar tiendas por término, ubicación, paginación y offset' })
+  @ApiResponse({ status: 200, description: 'Tiendas encontradas.' })
+  async searchStores(@Request() req) {
+    const { search, page = 1, limit = 20, offset, locations } = req.query;
+    return this.storesService.searchStores({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, locations });
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get store by ID' })
   @ApiResponse({ status: 200, description: 'Store retrieved successfully.' })
@@ -92,11 +100,4 @@ export class StoresController {
     return this.storesService.updateBranding(storeId, logoFile, bannerFile);
   }
 
-  @Get('search')
-  @ApiOperation({ summary: 'Buscar tiendas por término, ubicación, paginación y offset' })
-  @ApiResponse({ status: 200, description: 'Tiendas encontradas.' })
-  async searchStores(@Request() req) {
-    const { search, page = 1, limit = 20, offset, locations } = req.query;
-    return this.storesService.searchStores({ search, page: Number(page), limit: Number(limit), offset: offset !== undefined ? Number(offset) : undefined, locations });
-  }
 }

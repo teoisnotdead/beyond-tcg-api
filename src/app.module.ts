@@ -23,12 +23,17 @@ import { Favorite } from './favorites/entities/favorite.entity';
 import { FavoritesModule } from './favorites/favorites.module';
 import { SalesModule } from './sales/sales.module';
 import { PurchasesModule } from './purchases/purchases.module';
+import { Purchase } from './purchases/entities/purchase.entity';
 import { RatingsModule } from './ratings/ratings.module';
 import { CommentsModule } from './comments/comments.module';
 import { StoresModule } from './stores/stores.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { FeaturedModule } from './featured/featured.module';
+import { BadgesModule } from './badges/badges.module';
+import { Badge } from './badges/entities/badge.entity';
+import { UserBadge } from './badges/entities/user-badge.entity';
+import { StoreBadge } from './badges/entities/store-badge.entity';
 import { HeadersModule } from './common/headers/headers.module';
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalHttpExceptionFilter } from './common/http-exception.filter';
@@ -61,11 +66,15 @@ import { CommentSubscription } from './comments/entities/comment-subscription.en
           StoreRating,
           Store,
           Sale,
+          Purchase,
           StoreSocialLink,
           Favorite,
           Notification,
           Comment,
           CommentSubscription,
+          Badge,
+          UserBadge,
+          StoreBadge,
         ],
         synchronize: false,
       }),
@@ -85,6 +94,7 @@ import { CommentSubscription } from './comments/entities/comment-subscription.en
     CommentsModule,
     NotificationsModule,
     FeaturedModule,
+    BadgesModule,
     HeadersModule,
   ],
   providers: [

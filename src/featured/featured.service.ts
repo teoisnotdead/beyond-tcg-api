@@ -18,11 +18,10 @@ export class FeaturedService {
   ) {}
 
   async getFeatured() {
-    // Search for the Store plan (plan with name "Store")
-    const storePlan = await this.plansRepository.findOne({ where: { name: 'Store' } });
+    // Resolve plans by tier to avoid locale-specific plan names (e.g. "Store" vs "Tienda")
+    const storePlan = await this.plansRepository.findOne({ where: { tier: 'store' } });
     if (!storePlan) { throw new Error('Store plan not found'); }
-    // Search for the Pro plan (plan with name "Pro")
-    const proPlan = await this.plansRepository.findOne({ where: { name: 'Pro' } });
+    const proPlan = await this.plansRepository.findOne({ where: { tier: 'pro' } });
     if (!proPlan) { throw new Error('Pro plan not found'); }
 
     // Get all active subscriptions (Store and Pro) using queryBuilder to filter by plan_id and is_active

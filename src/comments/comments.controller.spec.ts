@@ -12,6 +12,8 @@ describe('CommentsController', () => {
             findAllForSale: jest.fn(),
             findAllForStore: jest.fn(),
             findAllForUser: jest.fn(),
+            subscribeToSaleComments: jest.fn(),
+            unsubscribeFromSaleComments: jest.fn(),
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -64,6 +66,36 @@ describe('CommentsController', () => {
 
             expect(service.findAllForStore).toHaveBeenCalledWith('store-1');
             expect(result).toEqual(comments);
+        });
+    });
+
+    describe('subscribeToSaleComments', () => {
+        it('should subscribe current user to sale comments', async () => {
+            const req = { user: { id: 'user-1' } };
+            const subscription = { id: 'sub-1' };
+            service.subscribeToSaleComments.mockResolvedValue(subscription);
+
+            const result = await controller.subscribeToSaleComments(req as any, 'sale-1');
+
+            expect(service.subscribeToSaleComments).toHaveBeenCalledWith('user-1', 'sale-1');
+            expect(result).toEqual({
+                message: 'Subscribed to sale comments successfully',
+                data: subscription,
+            });
+        });
+    });
+
+    describe('unsubscribeFromSaleComments', () => {
+        it('should unsubscribe current user from sale comments', async () => {
+            const req = { user: { id: 'user-1' } };
+            service.unsubscribeFromSaleComments.mockResolvedValue(undefined);
+
+            const result = await controller.unsubscribeFromSaleComments(req as any, 'sale-1');
+
+            expect(service.unsubscribeFromSaleComments).toHaveBeenCalledWith('user-1', 'sale-1');
+            expect(result).toEqual({
+                message: 'Unsubscribed from sale comments successfully',
+            });
         });
     });
 

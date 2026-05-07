@@ -4,11 +4,37 @@ import { EnvConfig } from '../config/env.config';
 
 @Injectable()
 export class CloudinaryService {
-  async uploadImage(file: Express.Multer.File, folder: string = 'general') {
+  private readonly folderAliases: Record<string, string> = {
+    general: 'Beyond TCG/general',
+    avatars: 'Beyond TCG/avatars',
+    sales: 'Beyond TCG/sales',
+    shippingProofs: 'Beyond TCG/shippingProofs',
+    deliveryProofs: 'Beyond TCG/deliveryProofs',
+    storeLogos: 'Beyond TCG/stores/logos',
+    storeBanners: 'Beyond TCG/stores/banners',
+  };
+
+  private resolveFolder(folder?: string): string {
+    if (!folder) {
+      return this.folderAliases.general;
+    }
+
+    const normalized = folder.trim();
+
+    // Backward compatibility for callers already sending full Cloudinary paths.
+    if (normalized.startsWith('Beyond TCG/')) {
+      return normalized;
+    }
+
+    return this.folderAliases[normalized] || this.folderAliases.general;
+  }
+
+  async uploadImage(file: Express.Multer.File, folder?: string) {
+    const resolvedFolder = this.resolveFolder(folder);
     return new Promise((resolve, reject) => {
       const upload = v2.uploader.upload_stream(
         {
-          folder,
+          folder: resolvedFolder,
           resource_type: 'auto',
         },
         (error, result) => {
@@ -54,7 +80,7 @@ export class CloudinaryService {
   async updateImage(
     file: Express.Multer.File,
     oldImageUrl: string | null,
-    folder: string = 'general',
+    folder?: string,
   ) {
     // Delete old image if it exists and is not the default avatar
     if (oldImageUrl && oldImageUrl !== EnvConfig().cloudinary.defaultAvatarUrl) {
@@ -67,4 +93,4 @@ export class CloudinaryService {
     // Upload new image
     return this.uploadImage(file, folder);
   }
-} 
+}

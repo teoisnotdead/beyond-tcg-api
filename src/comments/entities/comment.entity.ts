@@ -30,6 +30,6 @@ export class Comment {
   @Column({ type: 'text' })
   content: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   created_at: Date;
 }

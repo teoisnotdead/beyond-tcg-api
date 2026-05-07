@@ -12,6 +12,7 @@ import { UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
 import { NotificationsService } from './notifications.service';
 import { forwardRef, Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
@@ -26,6 +27,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   constructor(
     @Inject(forwardRef(() => NotificationsService))
     private notificationsService: NotificationsService,
+    private jwtService: JwtService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -37,9 +39,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         return;
       }
 
-      // Aquí deberías validar el token y obtener el userId
-      // Por ahora, asumimos que el token es válido y contiene el userId
-      const userId = token; // En producción, decodificar el JWT
+      const payload = this.jwtService.verify(token) as { sub?: string };
+      const userId = payload?.sub;
+      if (!userId) {
+        client.disconnect();
+        return;
+      }
       
       // Unir al cliente a su sala personal
       await client.join(userId);
@@ -62,7 +67,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { notificationId: string },
   ) {
-    const userId = client.handshake.query.token as string;
+    const userId = client.data?.user?.sub as string | undefined;
+    if (!userId) {
+      return;
+    }
     await this.notificationsService.markAsRead(data.notificationId, userId);
     const unreadCount = await this.notificationsService.getUnreadCount(userId);
     client.emit('unread_count', unreadCount);
@@ -71,7 +79,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('mark_all_as_read')
   async handleMarkAllAsRead(@ConnectedSocket() client: Socket) {
-    const userId = client.handshake.query.token as string;
+    const userId = client.data?.user?.sub as string | undefined;
+    if (!userId) {
+      return;
+    }
     await this.notificationsService.markAllAsRead(userId);
     client.emit('unread_count', 0);
   }

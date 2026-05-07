@@ -12,10 +12,11 @@ import { Favorite } from '../favorites/entities/favorite.entity';
 import { SalesModule } from '../sales/sales.module';
 import { FavoritesModule } from '../favorites/favorites.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Store, StoreSocialLink, StoreRating, Sale, Favorite]),
+    TypeOrmModule.forFeature([Store, StoreSocialLink, StoreRating, Sale, Favorite, User]),
     SubscriptionsModule,
     CommentsModule,
     forwardRef(() => SalesModule),

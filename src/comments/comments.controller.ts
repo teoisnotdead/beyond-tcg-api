@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Param, Delete } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -12,11 +12,11 @@ interface AuthRequest extends ExpressRequest {
 @ApiTags('comments')
 @ApiBearerAuth()
 @Controller('comments')
-@UseGuards(JwtAuthGuard)
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create a new comment or review' })
   @ApiResponse({ status: 201, description: 'Comment created successfully.' })
   create(@Request() req: AuthRequest, @Body() createCommentDto: CreateCommentDto) {
@@ -27,6 +27,27 @@ export class CommentsController {
   @ApiOperation({ summary: 'Get all comments for a sale' })
   findAllForSale(@Param('saleId') saleId: string) {
     return this.commentsService.findAllForSale(saleId);
+  }
+
+  @Post('sale/:saleId/subscribe')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Subscribe to sale comments notifications' })
+  async subscribeToSaleComments(@Request() req: AuthRequest, @Param('saleId') saleId: string) {
+    const subscription = await this.commentsService.subscribeToSaleComments(req.user.id, saleId);
+    return {
+      message: 'Subscribed to sale comments successfully',
+      data: subscription,
+    };
+  }
+
+  @Delete('sale/:saleId/subscribe')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Unsubscribe from sale comments notifications' })
+  async unsubscribeFromSaleComments(@Request() req: AuthRequest, @Param('saleId') saleId: string) {
+    await this.commentsService.unsubscribeFromSaleComments(req.user.id, saleId);
+    return {
+      message: 'Unsubscribed from sale comments successfully',
+    };
   }
 
   @Get('store/:storeId')

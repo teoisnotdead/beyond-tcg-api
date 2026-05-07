@@ -6,6 +6,7 @@ import { Sale } from '../sales/entities/sale.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
 import { StoreSocialLink } from './entities/store-social-link.entity';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { User } from '../users/entities/user.entity';
 
 describe('StoresService', () => {
     let service: StoresService;
@@ -37,6 +38,7 @@ describe('StoresService', () => {
                 { provide: getRepositoryToken(StoreSocialLink), useValue: {} },
                 { provide: getRepositoryToken(Sale), useValue: salesRepository },
                 { provide: getRepositoryToken(Favorite), useValue: { createQueryBuilder: jest.fn(() => mockQueryBuilder) } },
+                { provide: getRepositoryToken(User), useValue: {} },
                 { provide: CloudinaryService, useValue: {} },
             ],
         }).compile();

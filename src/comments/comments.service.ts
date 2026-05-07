@@ -7,6 +7,19 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 
+type PublicComment = {
+  id: string;
+  rating?: number | null;
+  content: string;
+  created_at: Date;
+  user: {
+    id: string;
+    name: string;
+    is_store: boolean;
+    avatar_url?: string | null;
+  };
+};
+
 @Injectable()
 export class CommentsService {
   constructor(
@@ -30,50 +43,39 @@ export class CommentsService {
 
     // Si es un comentario en una venta
     if (createCommentDto.sale_id) {
-      // Obtener el vendedor de la venta
-      const sale = await this.commentsRepository
-        .createQueryBuilder('comment')
-        .leftJoinAndSelect('comment.sale', 'sale')
-        .leftJoinAndSelect('sale.seller', 'seller')
-        .where('comment.id = :id', { id: savedComment.id })
-        .getOne();
+      try {
+        // Obtener el vendedor de la venta
+        const sale = await this.commentsRepository
+          .createQueryBuilder('comment')
+          .leftJoinAndSelect('comment.sale', 'sale')
+          .leftJoinAndSelect('sale.seller', 'seller')
+          .leftJoinAndSelect('comment.user', 'author')
+          .where('comment.id = :id', { id: savedComment.id })
+          .getOne();
 
-      if (sale?.sale?.seller?.id) {
-        // Notify the seller (only type and metadata, no title/message)
-        await this.notificationsService.create({
-          user_id: sale.sale.seller.id,
-          type: NotificationType.COMMENT_RECEIVED,
-          metadata: {
+        if (sale?.sale?.seller?.id) {
+          const metadata = {
             comment_id: savedComment.id,
             sale_id: createCommentDto.sale_id,
-            user_id: userId
-          }
-        });
+            sale_name: sale.sale.name,
+            user_id: userId,
+            comment_author_id: userId,
+            comment_author_name: sale.user?.name,
+          };
 
-        // Auto-subscribe the user who commented
-        await this.subscribeToSaleComments(userId, createCommentDto.sale_id);
-
-        // Notify all subscribers except the commenter
-        const subscribers = await this.subscriptionRepository.find({
-          where: { sale: { id: createCommentDto.sale_id } },
-          relations: ['user']
-        });
-
-        for (const subscriber of subscribers) {
-          if (subscriber.user.id !== userId) {
+          // Notify only the seller and avoid self-notifications.
+          if (sale.sale.seller.id !== userId) {
             await this.notificationsService.create({
-              user_id: subscriber.user.id,
+              user_id: sale.sale.seller.id,
               type: NotificationType.COMMENT_RECEIVED,
-              metadata: {
-                comment_id: savedComment.id,
-                sale_id: createCommentDto.sale_id,
-                user_id: userId
-              }
+              metadata,
             });
           }
         }
+      } catch (error) {
+        // Comentarios no deben fallar por problemas de notificaciones/suscripciones.
       }
-    }
+      }
 
     return savedComment;
   }
@@ -125,35 +127,87 @@ export class CommentsService {
     });
   }
 
-  async findAllForSale(saleId: string): Promise<Comment[]> {
-    return this.commentsRepository.find({
+  async findAllForSale(saleId: string): Promise<PublicComment[]> {
+    const comments = await this.commentsRepository.find({
       where: { sale: { id: saleId } },
       relations: ['user'],
       order: { created_at: 'DESC' },
     });
+
+    return comments.map((comment) => ({
+      id: comment.id,
+      rating: comment.rating ?? null,
+      content: comment.content,
+      created_at: comment.created_at,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        is_store: comment.user.is_store,
+        avatar_url: comment.user.avatar_url,
+      },
+    }));
   }
 
-  async findAllForStore(storeId: string): Promise<Comment[]> {
-    return this.commentsRepository.find({
+  async findAllForStore(storeId: string): Promise<PublicComment[]> {
+    const comments = await this.commentsRepository.find({
       where: { store: { id: storeId } },
       relations: ['user'],
       order: { created_at: 'DESC' },
     });
+
+    return comments.map((comment) => ({
+      id: comment.id,
+      rating: comment.rating ?? null,
+      content: comment.content,
+      created_at: comment.created_at,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        is_store: comment.user.is_store,
+        avatar_url: comment.user.avatar_url,
+      },
+    }));
   }
 
-  async findAllForUser(userId: string): Promise<Comment[]> {
-    return this.commentsRepository.find({
+  async findAllForUser(userId: string): Promise<PublicComment[]> {
+    const comments = await this.commentsRepository.find({
       where: { targetUser: { id: userId } },
       relations: ['user'],
       order: { created_at: 'DESC' },
     });
+
+    return comments.map((comment) => ({
+      id: comment.id,
+      rating: comment.rating ?? null,
+      content: comment.content,
+      created_at: comment.created_at,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        is_store: comment.user.is_store,
+        avatar_url: comment.user.avatar_url,
+      },
+    }));
   }
 
-  async findAllByAuthor(userId: string): Promise<Comment[]> {
-    return this.commentsRepository.find({
+  async findAllByAuthor(userId: string): Promise<PublicComment[]> {
+    const comments = await this.commentsRepository.find({
       where: { user: { id: userId } },
       relations: ['user'],
       order: { created_at: 'DESC' },
     });
+
+    return comments.map((comment) => ({
+      id: comment.id,
+      rating: comment.rating ?? null,
+      content: comment.content,
+      created_at: comment.created_at,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        is_store: comment.user.is_store,
+        avatar_url: comment.user.avatar_url,
+      },
+    }));
   }
 }

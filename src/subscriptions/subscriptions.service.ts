@@ -24,8 +24,13 @@ export class SubscriptionsService {
 
     if (user.current_subscription_id) {
       subscription = await this.userSubscriptionsRepository.findOne({
-        where: { id: user.current_subscription_id }
+        where: { id: user.current_subscription_id, user_id: userId },
+        relations: ['plan'],
       });
+
+      if (subscription && !subscription.is_active) {
+        subscription = null;
+      }
     }
 
     // Fallback for legacy/inconsistent data where user.current_subscription_id is null
@@ -34,6 +39,7 @@ export class SubscriptionsService {
       subscription = await this.userSubscriptionsRepository.findOne({
         where: { user_id: userId, is_active: true },
         order: { start_date: 'DESC' },
+        relations: ['plan'],
       });
 
       if (subscription) {
@@ -62,15 +68,18 @@ export class SubscriptionsService {
       throw new BadRequestException('This plan is not currently available');
     }
 
-    // Deactivate current subscription if exists
-    if (user.current_subscription_id) {
-      const currentSubscription = await this.userSubscriptionsRepository.findOne({
-        where: { id: user.current_subscription_id },
-      });
-      if (currentSubscription) {
-        currentSubscription.is_active = false;
-        await this.userSubscriptionsRepository.save(currentSubscription);
-      }
+    // Deactivate all current active subscriptions to keep data consistent
+    const activeSubscriptions = await this.userSubscriptionsRepository.find({
+      where: { user_id: userId, is_active: true },
+    });
+
+    if (activeSubscriptions.length > 0) {
+      await this.userSubscriptionsRepository.save(
+        activeSubscriptions.map((subscription) => ({
+          ...subscription,
+          is_active: false,
+        })),
+      );
     }
 
     // Create new subscription
@@ -90,10 +99,20 @@ export class SubscriptionsService {
     user.current_subscription_id = newSubscription.id;
     await this.usersService.update(userId, { current_subscription_id: newSubscription.id });
 
+    // Keep user account flag in sync for Store tier subscriptions
+    if (plan.tier === 'store') {
+      await this.usersService.update(userId, { is_store: true });
+    }
+
     // Emit event for badge assignment
     this.eventEmitter.emit('user.subscriptionChanged', new UserSubscriptionChangedEvent(userId, plan.name));
 
-    return newSubscription;
+    const hydratedSubscription = await this.userSubscriptionsRepository.findOne({
+      where: { id: newSubscription.id },
+      relations: ['plan'],
+    });
+
+    return hydratedSubscription || newSubscription;
   }
 
   async getAllPlans() {

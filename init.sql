@@ -24,6 +24,8 @@ CREATE TABLE SubscriptionPlans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL UNIQUE, -- 'Free', 'Premium'.
     price DECIMAL(10, 2) NOT NULL,
+    price_amount INTEGER NOT NULL,
+    price_currency VARCHAR(3) NOT NULL DEFAULT 'CLP',
     duration_days INTEGER NOT NULL,
     description TEXT,
     tier VARCHAR(50),
@@ -167,7 +169,15 @@ CREATE TABLE comments (
   target_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   rating INTEGER,
   content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE comment_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  sale_id UUID REFERENCES sales(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT now(),
+  UNIQUE(user_id, sale_id)
 );
 
 CREATE TABLE Purchases (
@@ -256,6 +266,8 @@ CREATE INDEX idx_notifications_created_at ON Notifications(created_at);
 CREATE INDEX idx_usersubscriptions_user_id ON UserSubscriptions(user_id);
 CREATE INDEX idx_usersubscriptions_end_date ON UserSubscriptions(end_date);
 CREATE INDEX idx_usersubscriptions_is_active ON UserSubscriptions(is_active);
+CREATE INDEX idx_comment_subscriptions_user_id ON comment_subscriptions(user_id);
+CREATE INDEX idx_comment_subscriptions_sale_id ON comment_subscriptions(sale_id);
 
 -- Índices para Badges
 CREATE INDEX idx_badges_type ON Badges(type);
@@ -314,11 +326,11 @@ SET name = EXCLUDED.name,
     updated_at = now();
 
 
-INSERT INTO SubscriptionPlans (id, name, price, duration_days, description, tier, features, is_active, created_at, updated_at)
+INSERT INTO SubscriptionPlans (id, name, price, price_amount, price_currency, duration_days, description, tier, features, is_active, created_at, updated_at)
 VALUES
-  (gen_random_uuid(), 'Free', 0.00, 3650, 'Plan gratuito por defecto', 'free', '{"maxSales": 10, "canCreateStore": false, "branding": false, "statistics": false, "featured": false, "support": "community"}', true, now(), now()),
-  (gen_random_uuid(), 'Pro', 4.99, 30, 'Plan Pro para usuarios avanzados', 'pro', '{"maxSales": 50, "canCreateStore": false, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now()),
-  (gen_random_uuid(), 'Tienda', 9.99, 30, 'Plan para tiendas profesionales', 'store', '{"maxSales": 1000, "canCreateStore": true, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now());
+  (gen_random_uuid(), 'Free', 0.00, 0, 'CLP', 3650, 'Plan gratuito por defecto', 'free', '{"maxSales": 10, "canCreateStore": false, "branding": false, "statistics": false, "featured": false, "support": "community"}', true, now(), now()),
+  (gen_random_uuid(), 'Pro', 4.99, 4990, 'CLP', 30, 'Plan Pro para usuarios avanzados', 'pro', '{"maxSales": 50, "canCreateStore": false, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now()),
+  (gen_random_uuid(), 'Tienda', 9.99, 9990, 'CLP', 30, 'Plan para tiendas profesionales', 'store', '{"maxSales": 1000, "canCreateStore": true, "branding": true, "statistics": true, "featured": true, "support": "priority"}', true, now(), now());
 
 -- Datos iniciales de Badges
 -- Usando placeholders de iconos de FontAwesome (gratuitos y ampliamente usados)

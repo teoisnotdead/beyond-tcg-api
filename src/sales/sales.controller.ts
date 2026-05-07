@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, Patch, Query, NotFoundException, BadRequestException, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ForbiddenException, UseInterceptors, Patch, Query, NotFoundException, BadRequestException, UploadedFiles, UnauthorizedException } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -11,6 +11,7 @@ import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SalesStateService } from './services/sales-state.service';
 import { ReserveSaleDto, ShipSaleDto, ConfirmDeliveryDto, CancelSaleDto } from './dto/change-sale-state.dto';
 import { Sale, SaleStatus } from './entities/sale.entity';
+import { JwtService } from '@nestjs/jwt';
 import { SalesHistoryService } from './services/sales-history.service';
 import { SalesHistoryFilterDto, HistoryItemType, SortField, SortOrder } from './dto/sales-history-filter.dto';
 import { HistoryItem } from './interfaces/history-item.interface';
@@ -19,6 +20,7 @@ import { SalesMetricsService } from './services/sales-metrics.service';
 import { SalesMetricsDto } from './dto/sales-metrics.dto';
 import { SalesReportService } from './services/sales-report.service';
 import { SalesReportDto, SalesReportFilterDto } from './dto/sales-report.dto';
+import { SalesDashboardDto } from './dto/sales-dashboard.dto';
 
 interface AuthRequest extends ExpressRequest {
   user: { id: string; [key: string]: any };
@@ -37,7 +39,35 @@ export class SalesController {
     private readonly salesTransitionRulesService: SalesTransitionRulesService,
     private readonly salesMetricsService: SalesMetricsService,
     private readonly salesReportService: SalesReportService,
+    private readonly jwtService: JwtService,
   ) {}
+
+  private resolveRangeStartDate(range?: string): Date | undefined {
+    if (!range) {
+      return undefined;
+    }
+
+    const normalized = String(range).toLowerCase();
+    const now = new Date();
+    const start = new Date(now);
+
+    if (normalized === '7d') {
+      start.setDate(now.getDate() - 7);
+      return start;
+    }
+
+    if (normalized === '30d') {
+      start.setDate(now.getDate() - 30);
+      return start;
+    }
+
+    if (normalized === '90d') {
+      start.setDate(now.getDate() - 90);
+      return start;
+    }
+
+    throw new BadRequestException('Invalid range. Allowed values: 7d, 30d, 90d');
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -76,9 +106,31 @@ export class SalesController {
   @Get()
   @ApiOperation({ summary: 'Get all sales' })
   @ApiResponse({ status: 200, description: 'Sales retrieved successfully.' })
-  findAll(@Request() req) {
+  findAll(@Request() req: AuthRequest) {
     const { page = 1, limit = 20, ...filters } = req.query;
-    return this.salesService.findAll(Number(page), Number(limit), filters);
+    const mineFilter = String((filters as any).mine || '').toLowerCase() === 'true';
+    let userId: string | undefined = req.user?.id;
+
+    if (mineFilter && !userId) {
+      const authHeader = req.headers?.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+      if (!token) {
+        throw new UnauthorizedException('Authentication required when mine=true');
+      }
+
+      try {
+        const payload = this.jwtService.verify(token) as { sub?: string };
+        userId = payload?.sub;
+      } catch (error) {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      if (!userId) {
+        throw new UnauthorizedException('Authentication required when mine=true');
+      }
+    }
+
+    return this.salesService.findAll(Number(page), Number(limit), filters, userId);
   }
 
   @Delete(':id')
@@ -382,6 +434,7 @@ export class SalesController {
   }
 
   @Get('metrics')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: 'Get sales metrics',
     description: 'Returns comprehensive sales metrics including revenue, conversion rates, and performance by category and store'
@@ -413,6 +466,41 @@ export class SalesController {
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
     );
+  }
+
+  @Get('analytics')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get analytics snapshot by date range',
+    description: 'Returns sales analytics metrics for the authenticated seller. Range supports 7d, 30d, and 90d.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Analytics snapshot retrieved successfully',
+    type: SalesMetricsDto,
+  })
+  @ApiQuery({ name: 'range', required: false, enum: ['7d', '30d', '90d'], description: 'Preset range for analytics data' })
+  async getSalesAnalytics(
+    @Request() req: AuthRequest,
+    @Query('range') range?: string,
+  ): Promise<SalesMetricsDto> {
+    const startDate = this.resolveRangeStartDate(range);
+    return this.salesMetricsService.getSalesMetrics(req.user.id, startDate, new Date());
+  }
+
+  @Get('dashboard')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get seller dashboard summary',
+    description: 'Returns sales cards, pending actions, and listing totals with count and amount for dashboard widgets',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard summary retrieved successfully',
+    type: SalesDashboardDto,
+  })
+  async getDashboardSummary(@Request() req: AuthRequest): Promise<SalesDashboardDto> {
+    return this.salesMetricsService.getDashboardSummary(req.user.id);
   }
 
   @Get('reports')
@@ -472,6 +560,6 @@ export class SalesController {
   @ApiOperation({ summary: 'Get sale by ID' })
   @ApiResponse({ status: 200, description: 'Sale retrieved successfully.' })
   findOne(@Param('id') id: string) {
-    return this.salesService.findOne(id);
+    return this.salesService.findOnePublic(id);
   }
 }

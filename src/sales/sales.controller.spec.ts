@@ -11,6 +11,7 @@ import { SalesReportService } from './services/sales-report.service';
 import { ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { SaleStatus } from './entities/sale.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtService } from '@nestjs/jwt';
 
 describe('SalesController', () => {
     let controller: SalesController;
@@ -18,6 +19,7 @@ describe('SalesController', () => {
     let subscriptionValidationService: any;
     let salesStateService: any;
     let salesTransitionRulesService: any;
+    let salesMetricsService: any;
 
     beforeEach(async () => {
         salesService = {
@@ -47,6 +49,11 @@ describe('SalesController', () => {
             getTransitionRule: jest.fn(),
         };
 
+        salesMetricsService = {
+            getSalesMetrics: jest.fn(),
+            getDashboardSummary: jest.fn(),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             controllers: [SalesController],
             providers: [
@@ -56,8 +63,9 @@ describe('SalesController', () => {
                 { provide: SalesStateService, useValue: salesStateService },
                 { provide: SalesHistoryService, useValue: {} },
                 { provide: SalesTransitionRulesService, useValue: salesTransitionRulesService },
-                { provide: SalesMetricsService, useValue: {} },
+                { provide: SalesMetricsService, useValue: salesMetricsService },
                 { provide: SalesReportService, useValue: {} },
+                { provide: JwtService, useValue: { verify: jest.fn() } },
             ],
         }).compile();
 
@@ -133,6 +141,41 @@ describe('SalesController', () => {
             salesService.findOne.mockResolvedValue(null);
             await expect(controller.updateSaleStatus('id', SaleStatus.RESERVED, {}, { user: { id: '1' } } as any))
                 .rejects.toThrow(NotFoundException);
+        });
+
+    });
+
+    describe('getDashboardSummary', () => {
+        it('should return dashboard summary for current user', async () => {
+            const req = { user: { id: 'seller-1' } };
+            const summary = {
+                cards: { available: { count: 1, amount: 1000 } },
+                pending_actions: { to_ship: { count: 0, amount: 0 } },
+                totals: { listings_count: 1, listings_amount: 1000 },
+            };
+            salesMetricsService.getDashboardSummary.mockResolvedValue(summary);
+
+            const result = await controller.getDashboardSummary(req as any);
+
+            expect(salesMetricsService.getDashboardSummary).toHaveBeenCalledWith('seller-1');
+            expect(result).toEqual(summary);
+        });
+    });
+
+    describe('getSalesAnalytics', () => {
+        it('should return analytics for a predefined range', async () => {
+            const req = { user: { id: 'seller-1' } };
+            const metrics = { total_sales: 5 };
+            salesMetricsService.getSalesMetrics.mockResolvedValue(metrics);
+
+            const result = await controller.getSalesAnalytics(req as any, '30d');
+
+            expect(salesMetricsService.getSalesMetrics).toHaveBeenCalledWith(
+                'seller-1',
+                expect.any(Date),
+                expect.any(Date),
+            );
+            expect(result).toEqual(metrics);
         });
     });
 });

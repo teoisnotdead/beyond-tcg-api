@@ -30,6 +30,38 @@ export interface SaleListItem {
   created_at: Date;
 }
 
+export interface SalePublicDetail {
+  id: string;
+  seller: {
+    id: string;
+    name: string;
+    is_store: boolean;
+    avatar_url?: string | null;
+  };
+  buyer_id?: string | null;
+  store_id?: string | null;
+  name: string;
+  description: string;
+  price: number;
+  image_url?: string | null;
+  quantity: number;
+  reserved_quantity?: number | null;
+  status: string;
+  views: number;
+  category: { id: string; name: string; slug: string } | null;
+  language: { id: string; name: string; slug: string } | null;
+  shipping_proof_url?: string | null;
+  delivery_proof_url?: string | null;
+  reserved_at?: Date | null;
+  shipped_at?: Date | null;
+  delivered_at?: Date | null;
+  completed_at?: Date | null;
+  cancelled_at?: Date | null;
+  original_quantity: number;
+  parent_sale_id?: string | null;
+  created_at: Date;
+}
+
 @Injectable()
 export class SalesService {
   constructor(
@@ -67,15 +99,22 @@ export class SalesService {
   async findAll(
     page: number = 1,
     limit: number = 20,
-    filters: any = {}
+    filters: any = {},
+    currentUserId?: string,
   ): Promise<{ data: SaleListItem[]; total: number; page: number; totalPages: number }> {
     let skip = (page - 1) * limit;
 
     const qb = this.salesRepository.createQueryBuilder('sale')
       .leftJoinAndSelect('sale.seller', 'seller')
       .leftJoinAndSelect('sale.category', 'category')
-      .leftJoinAndSelect('sale.language', 'language')
-      .andWhere('sale.status = :status', { status: SaleStatus.AVAILABLE });
+      .leftJoinAndSelect('sale.language', 'language');
+
+    const mineFilter = String(filters.mine || '').toLowerCase() === 'true';
+    if (mineFilter && currentUserId) {
+      qb.andWhere('seller.id = :currentUserId', { currentUserId });
+    } else {
+      qb.andWhere('sale.status = :status', { status: SaleStatus.AVAILABLE });
+    }
 
     // Filter by categories
     if (filters.categories) {
@@ -133,6 +172,42 @@ export class SalesService {
     sale.views += 1;
     await this.salesRepository.save(sale);
     return sale;
+  }
+
+  async findOnePublic(id: string): Promise<SalePublicDetail> {
+    const sale = await this.findOne(id);
+
+    return {
+      id: sale.id,
+      seller: {
+        id: sale.seller.id,
+        name: sale.seller.name,
+        is_store: sale.seller.is_store,
+        avatar_url: sale.seller.avatar_url,
+      },
+      buyer_id: sale.buyer_id || null,
+      store_id: sale.store_id || null,
+      name: sale.name,
+      description: sale.description,
+      price: Number(sale.price),
+      image_url: sale.image_url || null,
+      quantity: sale.quantity,
+      reserved_quantity: sale.reserved_quantity || null,
+      status: sale.status,
+      views: sale.views,
+      category: sale.category ? { id: sale.category.id, name: sale.category.name, slug: sale.category.slug } : null,
+      language: sale.language ? { id: sale.language.id, name: sale.language.name, slug: sale.language.slug } : null,
+      shipping_proof_url: sale.shipping_proof_url || null,
+      delivery_proof_url: sale.delivery_proof_url || null,
+      reserved_at: sale.reserved_at || null,
+      shipped_at: sale.shipped_at || null,
+      delivered_at: sale.delivered_at || null,
+      completed_at: sale.completed_at || null,
+      cancelled_at: sale.cancelled_at || null,
+      original_quantity: sale.original_quantity,
+      parent_sale_id: sale.parent_sale_id || null,
+      created_at: sale.created_at,
+    };
   }
 
   async remove(id: string): Promise<{ message: string }> {

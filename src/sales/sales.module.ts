@@ -28,6 +28,7 @@ import { SalesStatisticsController } from './controllers/sales-statistics.contro
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     CategoriesModule,
     LanguagesModule,
     NotificationsModule,
+    forwardRef(() => AuthModule),
   ],
   providers: [
     SalesService,

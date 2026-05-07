@@ -8,6 +8,7 @@ import { Sale, SaleStatus } from '../sales/entities/sale.entity';
 import { Favorite } from '../favorites/entities/favorite.entity';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Inject } from '@nestjs/common';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class StoresService {
@@ -20,6 +21,8 @@ export class StoresService {
     private salesRepository: Repository<Sale>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     @Inject(CloudinaryService)
     private cloudinaryService: CloudinaryService,
   ) { }
@@ -44,7 +47,11 @@ export class StoresService {
       );
     }
 
-    return this.storesRepository.save(store);
+    const savedStore = await this.storesRepository.save(store);
+
+    await this.usersRepository.update(userId, { is_store: true });
+
+    return savedStore;
   }
 
   async findAll(page: number = 1, limit: number = 20, filters: Partial<Store> = {}): Promise<{ data: Store[]; total: number; page: number; totalPages: number }> {

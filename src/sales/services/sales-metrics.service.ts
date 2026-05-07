@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Sale, SaleStatus } from '../entities/sale.entity';
 import { Purchase } from '../../purchases/entities/purchase.entity';
 import { SalesMetricsDto } from '../dto/sales-metrics.dto';
+import { SalesDashboardDto } from '../dto/sales-dashboard.dto';
 
 @Injectable()
 export class SalesMetricsService {
@@ -162,6 +163,93 @@ export class SalesMetricsService {
       },
       category_performance: metrics.category_performance || [],
       store_performance: metrics.store_performance || [],
+    };
+  }
+
+  async getDashboardSummary(userId: string): Promise<SalesDashboardDto> {
+    const query = `
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'available') AS available_count,
+        COALESCE(SUM(price * quantity) FILTER (WHERE status = 'available'), 0) AS available_amount,
+
+        COUNT(*) FILTER (WHERE status = 'reserved') AS reserved_count,
+        COALESCE(SUM(price * quantity) FILTER (WHERE status = 'reserved'), 0) AS reserved_amount,
+
+        COUNT(*) FILTER (WHERE status = 'shipped') AS shipped_count,
+        COALESCE(SUM(price * quantity) FILTER (WHERE status = 'shipped'), 0) AS shipped_amount,
+
+        COUNT(*) FILTER (
+          WHERE status = 'completed'
+            AND completed_at >= NOW() - INTERVAL '30 days'
+        ) AS completed_30d_count,
+        COALESCE(SUM(price * quantity) FILTER (
+          WHERE status = 'completed'
+            AND completed_at >= NOW() - INTERVAL '30 days'
+        ), 0) AS completed_30d_amount,
+
+        COUNT(*) FILTER (
+          WHERE status = 'cancelled'
+            AND cancelled_at >= NOW() - INTERVAL '30 days'
+        ) AS cancelled_30d_count,
+        COALESCE(SUM(price * quantity) FILTER (
+          WHERE status = 'cancelled'
+            AND cancelled_at >= NOW() - INTERVAL '30 days'
+        ), 0) AS cancelled_30d_amount,
+
+        COUNT(*) FILTER (WHERE status = 'reserved') AS pending_to_ship_count,
+        COALESCE(SUM(price * quantity) FILTER (WHERE status = 'reserved'), 0) AS pending_to_ship_amount,
+
+        COUNT(*) FILTER (WHERE status = 'shipped') AS pending_to_confirm_count,
+        COALESCE(SUM(price * quantity) FILTER (WHERE status = 'shipped'), 0) AS pending_to_confirm_amount,
+
+        COUNT(*) FILTER (WHERE status IN ('available', 'reserved', 'shipped')) AS listings_count,
+        COALESCE(SUM(price * quantity) FILTER (WHERE status IN ('available', 'reserved', 'shipped')), 0) AS listings_amount
+      FROM sales
+      WHERE seller_id = $1
+    `;
+
+    const [row] = await this.dataSource.query(query, [userId]);
+
+    const asCount = (value: unknown): number => Number.parseInt(String(value ?? 0), 10) || 0;
+    const asAmount = (value: unknown): number => Number.parseFloat(String(value ?? 0)) || 0;
+
+    return {
+      cards: {
+        available: {
+          count: asCount(row.available_count),
+          amount: asAmount(row.available_amount),
+        },
+        reserved: {
+          count: asCount(row.reserved_count),
+          amount: asAmount(row.reserved_amount),
+        },
+        shipped: {
+          count: asCount(row.shipped_count),
+          amount: asAmount(row.shipped_amount),
+        },
+        completed_30d: {
+          count: asCount(row.completed_30d_count),
+          amount: asAmount(row.completed_30d_amount),
+        },
+        cancelled_30d: {
+          count: asCount(row.cancelled_30d_count),
+          amount: asAmount(row.cancelled_30d_amount),
+        },
+      },
+      pending_actions: {
+        to_ship: {
+          count: asCount(row.pending_to_ship_count),
+          amount: asAmount(row.pending_to_ship_amount),
+        },
+        to_confirm_delivery: {
+          count: asCount(row.pending_to_confirm_count),
+          amount: asAmount(row.pending_to_confirm_amount),
+        },
+      },
+      totals: {
+        listings_count: asCount(row.listings_count),
+        listings_amount: asAmount(row.listings_amount),
+      },
     };
   }
 }

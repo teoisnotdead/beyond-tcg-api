@@ -22,7 +22,12 @@ export class NotificationsService {
     const savedNotification = await this.notificationsRepository.save(notification);
     
     // Emitir la notificación a través del WebSocket
-    this.notificationsGateway.server.to(data.user_id).emit('notification', savedNotification);
+    try {
+      this.notificationsGateway?.server?.to(data.user_id).emit('notification', savedNotification);
+    } catch (error) {
+      // Si el gateway no está listo o no hay conexiones activas,
+      // mantenemos la notificación persistida en BD sin interrumpir el flujo.
+    }
     
     return savedNotification;
   }

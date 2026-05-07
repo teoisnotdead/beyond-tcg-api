@@ -65,11 +65,51 @@ describe('CloudinaryService', () => {
                 return { end: jest.fn() };
             });
 
-            const result = await service.uploadImage(mockFile, 'test-folder');
+            const result = await service.uploadImage(mockFile, 'sales');
 
             expect(result).toEqual(mockResult);
             expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
-                { folder: 'test-folder', resource_type: 'auto' },
+                { folder: 'Beyond TCG/sales', resource_type: 'auto' },
+                expect.any(Function)
+            );
+        });
+
+        it('should use default folder for unknown alias', async () => {
+            const mockFile = {
+                buffer: Buffer.from('test'),
+            } as Express.Multer.File;
+
+            const mockResult = { secure_url: 'https://cloudinary.com/image.jpg', public_id: 'test_id' };
+
+            (cloudinary.uploader.upload_stream as jest.Mock).mockImplementation((options, callback) => {
+                callback(null, mockResult);
+                return { end: jest.fn() };
+            });
+
+            await service.uploadImage(mockFile, 'something-unknown');
+
+            expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
+                { folder: 'Beyond TCG/general', resource_type: 'auto' },
+                expect.any(Function)
+            );
+        });
+
+        it('should keep legacy full path folders', async () => {
+            const mockFile = {
+                buffer: Buffer.from('test'),
+            } as Express.Multer.File;
+
+            const mockResult = { secure_url: 'https://cloudinary.com/image.jpg', public_id: 'test_id' };
+
+            (cloudinary.uploader.upload_stream as jest.Mock).mockImplementation((options, callback) => {
+                callback(null, mockResult);
+                return { end: jest.fn() };
+            });
+
+            await service.uploadImage(mockFile, 'Beyond TCG/stores/logos');
+
+            expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
+                { folder: 'Beyond TCG/stores/logos', resource_type: 'auto' },
                 expect.any(Function)
             );
         });
@@ -86,7 +126,7 @@ describe('CloudinaryService', () => {
                 return { end: jest.fn() };
             });
 
-            await expect(service.uploadImage(mockFile, 'test-folder')).rejects.toThrow('Upload failed');
+            await expect(service.uploadImage(mockFile, 'sales')).rejects.toThrow('Upload failed');
         });
     });
 

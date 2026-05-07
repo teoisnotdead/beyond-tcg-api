@@ -22,8 +22,10 @@ describe('SubscriptionsService', () => {
 
         subscriptionsRepository = {
             findOne: jest.fn(),
+            find: jest.fn(),
             save: jest.fn(),
         };
+        subscriptionsRepository.find.mockResolvedValue([]);
 
         usersService = {
             findOne: jest.fn(),
@@ -92,7 +94,10 @@ describe('SubscriptionsService', () => {
             const result = await service.getCurrentSubscription('user-1');
 
             expect(usersService.findOne).toHaveBeenCalledWith('user-1');
-            expect(subscriptionsRepository.findOne).toHaveBeenCalledWith({ where: { id: 'sub-1' } });
+            expect(subscriptionsRepository.findOne).toHaveBeenCalledWith({
+                where: { id: 'sub-1', user_id: 'user-1' },
+                relations: ['plan'],
+            });
             expect(result).toEqual(subscription);
         });
 
@@ -116,6 +121,7 @@ describe('SubscriptionsService', () => {
             expect(subscriptionsRepository.findOne).toHaveBeenCalledWith({
                 where: { user_id: 'user-1', is_active: true },
                 order: { start_date: 'DESC' },
+                relations: ['plan'],
             });
             expect(usersService.update).toHaveBeenCalledWith('user-1', { current_subscription_id: 'sub-active' });
             expect(result).toEqual(activeSubscription);
@@ -158,13 +164,13 @@ describe('SubscriptionsService', () => {
 
             usersService.findOne.mockResolvedValue(user);
             plansRepository.findOne.mockResolvedValue(plan);
-            subscriptionsRepository.findOne.mockResolvedValue(oldSubscription);
+            subscriptionsRepository.find.mockResolvedValue([oldSubscription]);
             subscriptionsRepository.save.mockResolvedValue(newSubscription);
 
             await service.upgradeSubscription('user-1', 'plan-2');
 
             expect(subscriptionsRepository.save).toHaveBeenCalledWith(
-                expect.objectContaining({ is_active: false })
+                [expect.objectContaining({ is_active: false })]
             );
         });
 

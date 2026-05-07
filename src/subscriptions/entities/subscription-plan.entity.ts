@@ -11,6 +11,12 @@ export class SubscriptionPlan {
   @Column('decimal', { precision: 10, scale: 2 })
   price: number;
 
+  @Column({ type: 'int' })
+  price_amount: number;
+
+  @Column({ length: 3, default: 'CLP' })
+  price_currency: string;
+
   @Column()
   duration_days: number;
 

@@ -30,7 +30,7 @@ export class CloudinaryController {
         },
         folder: {
           type: 'string',
-          description: 'Folder where the image will be stored (default: general)',
+          description: 'Folder alias (general, avatars, sales, shippingProofs, deliveryProofs, storeLogos, storeBanners). Full paths under Beyond TCG/* are also accepted for backward compatibility.',
         },
       },
     },

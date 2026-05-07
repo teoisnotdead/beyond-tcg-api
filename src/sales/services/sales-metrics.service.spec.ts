@@ -77,4 +77,35 @@ describe('SalesMetricsService', () => {
             expect(result.total_revenue).toBe(1000);
         });
     });
+
+    describe('getDashboardSummary', () => {
+        it('should return dashboard cards with count and amount', async () => {
+            dataSource.query.mockResolvedValue([{
+                available_count: '3',
+                available_amount: '150000',
+                reserved_count: '2',
+                reserved_amount: '80000',
+                shipped_count: '1',
+                shipped_amount: '40000',
+                completed_30d_count: '5',
+                completed_30d_amount: '250000',
+                cancelled_30d_count: '1',
+                cancelled_30d_amount: '20000',
+                pending_to_ship_count: '2',
+                pending_to_ship_amount: '80000',
+                pending_to_confirm_count: '1',
+                pending_to_confirm_amount: '40000',
+                listings_count: '6',
+                listings_amount: '270000',
+            }]);
+
+            const result = await service.getDashboardSummary('seller-1');
+
+            expect(dataSource.query).toHaveBeenCalled();
+            expect(result.cards.available).toEqual({ count: 3, amount: 150000 });
+            expect(result.cards.completed_30d).toEqual({ count: 5, amount: 250000 });
+            expect(result.pending_actions.to_ship).toEqual({ count: 2, amount: 80000 });
+            expect(result.totals).toEqual({ listings_count: 6, listings_amount: 270000 });
+        });
+    });
 });
